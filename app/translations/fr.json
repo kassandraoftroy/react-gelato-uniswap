@@ -1,0 +1,5 @@
+{
+    "boilerplate.components.Footer.tagline": "gelato uniswap demo",
+    "boilerplate.components.Footer.authorMessage": "Fait par {author}",
+    "boilerplate.containers.HomePage.header": "Uniswap Automatisé avec Gelato"
+}
