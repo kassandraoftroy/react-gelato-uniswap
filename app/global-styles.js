@@ -42,6 +42,18 @@ const GlobalStyle = createGlobalStyle`
       text-align: center;
   }
 
+  .small {
+      font-size: 0.75em;
+  }
+
+  .hidden {
+      display: none;
+  }
+
+  .green {
+      color: green;
+  }
+
   button {
     background-color: black;
     outline:none;
@@ -50,6 +62,8 @@ const GlobalStyle = createGlobalStyle`
     border-color: black;
     line-height:1.5em;
     font-size:0.8em;
+    margin-right: 0.3em;
+    margin-left: 0.3em;
     margin-top: 0;
     margin-bottom: 0;
     width: auto;

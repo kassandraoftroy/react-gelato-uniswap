@@ -2,9 +2,10 @@
 
 const express = require('express');
 const logger = require('./logger');
-
 const argv = require('./argv');
 const port = require('./port');
+const bodyParser = require('body-parser');
+const hre = require('hardhat');
 const setup = require('./middlewares/frontendMiddleware');
 const isDev = process.env.NODE_ENV !== 'production';
 const ngrok =
@@ -23,10 +24,25 @@ setup(app, {
   publicPath: '/',
 });
 
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
 // get the intended host and port number, use localhost and port 3000 if not provided
 const customHost = argv.host || process.env.HOST;
 const host = customHost || null; // Let http.Server use its default IPv6/4 host
 const prettyHost = customHost || 'localhost';
+
+app.post('/contracts', (_req, res) => {
+    let erc20Artifact = hre.artifacts.readArtifactSync("IERC20");
+    let proxyFactoryArtifact = hre.artifacts.readArtifactSync('IGelatoUserProxyFactory');
+    let proxyFactoryAddress = hre.network.config.deployments.GelatoUserProxyFactory;
+    let wethAddress = hre.network.config.addressBook.erc20.WETH;
+    let daiAddress = hre.network.config.addressBook.erc20.DAI;
+    //let proxyArtifact = hre.artifacts.readArtifactSync('IGelatoUserProxy');
+    //let uniArtifact = hre.artifacts.readArtifactSync('IUniswapV2Router02');
+    let contracts = {GelatoUserProxyFactory: {abi: proxyFactoryArtifact.abi, address: proxyFactoryAddress}, WETH: {abi:erc20Artifact.abi, address: wethAddress}, DAI: {abi:erc20Artifact.abi, address: daiAddress}};
+    return res.json(contracts);
+});
 
 // use the gzipped bundle
 app.get('*.js', (req, res, next) => {
