@@ -1,5 +1,14 @@
 {
+    "boilerplate.containers.HomePage.header": "Operaciones Uniswap automatizadas con Gelato",
+    "boilerplate.containers.HomePage.connectWallet": "conecta tu billetera",
+    "boilerplate.containers.HomePage.walletHeader": "Billetera",
+    "boilerplate.containers.HomePage.addressLabel": "Direccion",
+    "boilerplate.containers.HomePage.getProxy": "obtener un proxy",
+    "boilerplate.containers.HomePage.haveProxy": "Usted tiene un Gelato Proxy",
+    "boilerplate.containers.LocaleToggle.de": "de",
+    "boilerplate.containers.LocaleToggle.fr": "fr",
+    "boilerplate.containers.LocaleToggle.en": "en",
+    "boilerplate.containers.LocaleToggle.es": "es",
     "boilerplate.components.Footer.tagline": "gelato uniswap demo",
-    "boilerplate.components.Footer.authorMessage": "Hecho por {author}",
-    "boilerplate.containers.HomePage.header": "Operaciones Uniswap automatizadas con Gelato"
+    "boilerplate.components.Footer.authorMessage": "Hecho por {author}"
 }

@@ -36,6 +36,14 @@ const GlobalStyle = createGlobalStyle`
     height: 20em;
     margin-bottom: 2em;
     margin-left: 3em;
+    float: left;
+  }
+
+  .greySquare {
+    border-radius: 0.2em;
+    width: 100%;
+    height: 100%;
+    background-color: grey;
   }
 
   .centered {
@@ -67,6 +75,20 @@ const GlobalStyle = createGlobalStyle`
     margin-top: 0;
     margin-bottom: 0;
     width: auto;
+  }
+
+  .classicLink {
+      color: blue,
+      text-decoration: underline,
+      cursor: pointer,
+  }
+
+  .classicLink:hover {
+      color: grey,
+  }
+
+  .classicLink:hover {
+      color: purple,
   }
 
   button:hover {

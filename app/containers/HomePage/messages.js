@@ -14,7 +14,7 @@ export default defineMessages({
   },
   connectWallet: {
       id: `${scope}.connectWallet`,
-      defaultMessage: 'Connect Wallet',
+      defaultMessage: 'connect wallet',
   },
   walletHeader: {
     id: `${scope}.walletHeader`,
@@ -24,4 +24,12 @@ export default defineMessages({
     id: `${scope}.addressLabel`,
     defaultMessage: 'Address',
   },
+  getProxy: {
+    id: `${scope}.getProxy`,
+    defaultMessage: 'get a proxy',
+  },
+  haveProxy: {
+    id: `${scope}.haveProxy`,
+    defaultMessage: 'You have a Gelato Proxy',
+  }
 });

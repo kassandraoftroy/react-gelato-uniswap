@@ -1,5 +1,9 @@
 {    
+    "boilerplate.containers.HomePage.header": "Automated Uniswap Trades using Gelato",
+    "boilerplate.containers.LocaleToggle.de": "de",
+    "boilerplate.containers.LocaleToggle.fr": "fr",
+    "boilerplate.containers.LocaleToggle.en": "en",
+    "boilerplate.containers.LocaleToggle.es": "es",
     "boilerplate.components.Footer.tagline": "gelato uniswap demo",
-    "boilerplate.components.Footer.authorMessage": "Made by {author}",
-    "boilerplate.containers.HomePage.header": "Automated Uniswap Trades using Gelato"
+    "boilerplate.components.Footer.authorMessage": "Made by {author}"
 }
