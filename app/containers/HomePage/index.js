@@ -14,17 +14,16 @@ import { useInterval } from 'utils/polling';
 
 const STATIC_SALT = 1234321; // Static Salt For Dynamic
 
-/*const bufferToHex = (buffer) => {
-    let result = [...new Uint8Array (buffer)]
-        .map (b => b.toString (16).padStart (2, "0"))
-        .join ("");
-    return "0x"+result;
-}*/
+const encodeWithSelector = (abi, functionname, inputs) => {
+    let iface = new ethers.utils.Interface(abi);
+    return iface.functions[functionname].encode(inputs);
+}
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [hasProxy, setHasProxy] = useState(false);
+  const [isRunningTaskLoop, setIsRunningTaskLoop] = useState(false);
 
   const [userBalances, setUserBalances] = useState(null);
   const [proxyAllowance, setProxyAllowance] = useState(null);
@@ -34,6 +33,8 @@ export default function HomePage() {
   const [proxyAddress, setProxyAddress] = useState("");
   const [createProxyProgress, setCreateProxyProgress] = useState("");
   const [createProxyTx, setCreateProxyTx] = useState("");
+  const [approveDaiProgress, setApproveDaiProgress] = useState("");
+  const [approveDaiTx, setApproveDaiTx] = useState("");
 
   const handleConnectWallet = async (_e) => {
     try {
@@ -81,7 +82,7 @@ export default function HomePage() {
         let maxWeiGas = gasPrice*gasLimit;
         let balance = await contracts.ProxyFactory.signer.getBalance();
         if (maxWeiGas>balance) {
-            setCreateProxyProgress("You don't have enough ETH (need: "+Number(ethers.utils.formatEther(maxWieGas.toString())).toFixed(7)+")");
+            setCreateProxyProgress("You don't have enough ETH (need: "+Number(ethers.utils.formatEther(maxWeiGas.toString())).toFixed(7)+")");
         }
         let createTx = await contracts.ProxyFactory.functions.createTwo(STATIC_SALT, {gasLimit: gasLimit, gasPrice: gasPrice});
         console.log('create!', createTx.hash);
@@ -92,7 +93,6 @@ export default function HomePage() {
             try {
                 let hasproxy = await contracts.ProxyFactory.functions.isGelatoUserProxy(proxyAddress);
                 if (hasproxy[0]) {
-                    setCreateProxyProgress("Transaction mined...");
                     let daiAllowance = await contracts.DAI.functions.allowance(userAddress, proxyAddress);
                     let wethAllowance = await contracts.WETH.functions.allowance(userAddress, proxyAddress);
                     let allowances = {DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())};
@@ -100,16 +100,60 @@ export default function HomePage() {
                     setHasProxy(hasproxy[0]);
                     setCreateProxyTx("");
                 } else {
-                    console.log("waiting for proxy...");
+                    console.log("waiting for proxy tx...");
                     await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             } catch(e) {
-                console.log("error waiting for proxy...", e.message);
+                console.log("error waiting for proxy tx...", e.message);
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
       } catch(e) {
           console.log("error in handleGetProxy:", e.message);
+      }
+  }
+
+  const handleApproveDai = async (_e) => {
+      try {
+        let ele = document.getElementById('daiAllowance');
+        let amountDai = Number(ele.value);
+        let amount = ethers.utils.parseEther(amountDai.toString());
+        ele.value = "";
+        let gasLimit = 100000;
+        let gasPrice = await contracts.DAI.signer.provider.getGasPrice();
+        let maxWeiGas = gasPrice*gasLimit;
+        let balance = await contracts.DAI.signer.getBalance();
+        if (maxWeiGas>balance) {
+            setApproveDaiProgress("You don't have enough ETH (need: "+Number(ethers.utils.formatEther(maxWeiGas.toString())).toFixed(7)+")");
+        } else {
+            setApproveDaiProgress("Approving...");
+        }
+        let tx = await contracts.DAI.functions.approve(proxyAddress, amount, {gasLimit: gasLimit, gasPrice: gasPrice});
+        setApproveDaiTx(tx.hash);
+        setApproveDaiProgress("Transaction submitted...");
+        await contracts.DAI.signer.provider.getTransactionReceipt(tx.hash);
+        while (true) {
+            try {
+                let rawDaiAllowance = await contracts.DAI.functions.allowance(userAddress, proxyAddress);
+                let newDaiAllowance = ethers.utils.formatEther(rawDaiAllowance.toString());
+                if (Number(newDaiAllowance) != Number(proxyAllowance.DAI)) {
+                    setCreateProxyProgress("Transaction mined...");
+                    let allowances = JSON.parse(JSON.stringify(proxyAllowance));
+                    allowances.DAI = newDaiAllowance;
+                    setApproveDaiProgress("");
+                    setApproveDaiTx("");
+                    setProxyAllowance(allowances);
+                } else {
+                    console.log("waiting for approve tx...");
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            } catch(e) {
+                console.log("error waiting for approve tx...", e.message);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+      } catch(e) {
+          console.log("error in handleApproveDai:", e.message);
       }
   }
 
@@ -133,9 +177,10 @@ export default function HomePage() {
         let balances = {ETH: ethers.utils.formatEther(ethBalance.toString()), WETH: ethers.utils.formatEther(wethBalance.toString()), DAI: ethers.utils.formatEther(daiBalance.toString())};
         setUserBalances(balances);
         if (hasProxy) {
-            let daiAllowance = await daiContract.functions.allowance(address, predicted[0]);
-            let wethAllowance = await wethContract.functions.allowance(address, predicted[0]);
-            setProxyAllowance({DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())});
+            let daiAllowance = await contracts.DAI.functions.allowance(address, predicted[0]);
+            let wethAllowance = await contracts.WETH.functions.allowance(address, predicted[0]);
+            let allowances = {DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())};
+            setProxyAllowance(allowances);
         }
     }
   }, 3000);
@@ -168,17 +213,19 @@ export default function HomePage() {
                     {isConnected ?
                         <span>
                         {hasProxy ?
-
                             <span>
                                 <p><FormattedMessage {...messages.haveProxy} /> <span className="green">✔</span></p>
-                                <p>DAI Allowance: {proxyAllowance.DAI}</p>
-                                <p>WETH Allowance: {proxyAllowance.WETH}</p>
+                                <p>DAI <FormattedMessage {...messages.allowance} />: {proxyAllowance.DAI}</p>
+                                <p>WETH <FormattedMessage {...messages.allowance} />: {proxyAllowance.WETH}</p>
+                                <br></br>
+                                <p><FormattedMessage {...messages.amount} />:<input type="text" size="6" id="daiAllowance"></input> <button onClick={handleApproveDai}><FormattedMessage {...messages.approve} /> DAI</button></p>
+                                <p>{approveDaiProgress} {approveDaiTx!="" ? <a className="classicLink" href={'https://rinkeby.etherscan.io/tx/'+approveDaiTx.toString()}>view tx</a>:<span></span>}</p>
                             </span>
                             :
                             <span>
                                 <br></br>
                                 <p><button onClick={handleGetProxy}><FormattedMessage {...messages.getProxy} /></button></p>
-                                <p>{createProxyProgress}{createProxyTx!="" ? <a className="classicLink" href={'https://rinkeby.etherscan.io/tx/'+createProxyTx.toString()}>view tx</a>:<span></span>}</p>
+                                <p>{createProxyProgress} {createProxyTx!="" ? <a className="classicLink" href={'https://rinkeby.etherscan.io/tx/'+createProxyTx.toString()}>view tx</a>:<span></span>}</p>
                             </span>
                         }
                         </span>
@@ -187,7 +234,25 @@ export default function HomePage() {
                     }
                 </div>
                 <div className="borderedSquare centered">
-                    <div className="greySquare"></div>
+                    {isConnected ?
+                        <span>
+                        {isRunningTaskLoop ?
+                            <span>
+                                <p><FormattedMessage {...messages.traderRunning} /></p>
+                                <p><button><FormattedMessage {...messages.traderStop} /></button></p>
+                            </span>
+                        :
+                            <span>
+                                <p><FormattedMessage {...messages.traderHeader} /></p>
+                                <p><FormattedMessage {...messages.amount} />:<input type="text" size="6" id="amountPerTrade"></input></p>
+                                <p><FormattedMessage {...messages.seconds} />:<input type="text" size="6" id="delayLength"></input></p>
+                                <p><button><FormattedMessage {...messages.traderStart} /></button></p>
+                            </span>
+                        }
+                        </span>
+                    :
+                        <div className="greySquare"></div>
+                    }
                 </div>
             </div>
         </div>

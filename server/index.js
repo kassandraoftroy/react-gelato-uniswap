@@ -33,14 +33,19 @@ const host = customHost || null; // Let http.Server use its default IPv6/4 host
 const prettyHost = customHost || 'localhost';
 
 app.post('/contracts', (_req, res) => {
-    let erc20Artifact = hre.artifacts.readArtifactSync("IERC20");
+    let coreArtifact = hre.artifacts.readArtifactSync('GelatoCore');
     let proxyFactoryArtifact = hre.artifacts.readArtifactSync('IGelatoUserProxyFactory');
+    let proxyArtifact = hre.artifacts.readArtifactSync('IGelatoUserProxy');
+    let uniArtifact = hre.artifacts.readArtifactSync('IUniswapV2Router02');
+    let erc20Artifact = hre.artifacts.readArtifactSync('IERC20');
     let proxyFactoryAddress = hre.network.config.deployments.GelatoUserProxyFactory;
     let wethAddress = hre.network.config.addressBook.erc20.WETH;
     let daiAddress = hre.network.config.addressBook.erc20.DAI;
-    //let proxyArtifact = hre.artifacts.readArtifactSync('IGelatoUserProxy');
-    //let uniArtifact = hre.artifacts.readArtifactSync('IUniswapV2Router02');
-    let contracts = {GelatoUserProxyFactory: {abi: proxyFactoryArtifact.abi, address: proxyFactoryAddress}, WETH: {abi:erc20Artifact.abi, address: wethAddress}, DAI: {abi:erc20Artifact.abi, address: daiAddress}};
+    let uniAddress = hre.network.config.addressBook.uniswapV2.router2;
+    let providerModuleAddress = hre.network.config.deployments.ProviderModuleGelatoUserProxy;
+    let coreAddress = hre.network.config.deployments.GelatoCore;
+    let executor = hre.network.config.addressBook.gelatoExecutor.default;
+    let contracts = {GelatoUserProxyFactory: {abi: proxyFactoryArtifact.abi, address: proxyFactoryAddress}, WETH: {abi:erc20Artifact.abi, address: wethAddress}, DAI: {abi:erc20Artifact.abi, address: daiAddress}, GelatoProviderModule: {address: providerModuleAddress}, UniswapRouter: {address: uniAddress, abi: uniArtifact.abi}, IGelatoUserProxy:{abi: proxyArtifact.abi}, GelatoCore: {abi: coreArtifact.abi, address: coreAddress}, GelatoExecutor: {address: executor}};
     return res.json(contracts);
 });
 
