@@ -14,11 +14,6 @@ import { useInterval } from 'utils/polling';
 
 const STATIC_SALT = 1234321; // Static Salt For Dynamic
 
-const encodeWithSelector = (abi, functionname, inputs) => {
-    let iface = new ethers.utils.Interface(abi);
-    return iface.functions[functionname].encode(inputs);
-}
-
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -28,6 +23,8 @@ export default function HomePage() {
   const [userBalances, setUserBalances] = useState(null);
   const [proxyAllowance, setProxyAllowance] = useState(null);
   const [contracts, setContracts] = useState(null);
+  const [allAbi, setAllAbi] = useState(null);
+  const [allAddresses, setAllAddresses] = useState(null);
 
   const [userAddress, setUserAddress] = useState("");
   const [proxyAddress, setProxyAddress] = useState("");
@@ -44,9 +41,15 @@ export default function HomePage() {
         let address = await signer.getAddress();
         let ethBalance = await signer.getBalance();
         let r = await axios.post('http://127.0.0.1:3000/contracts', {}, {});
+        let abis = {DAI: r.data.DAI.abi, WETH: r.data.WETH.abi, ProxyFactory: r.data.GelatoUserProxyFactory.abi, UniswapRouter: r.data.UniswapRouter.abi, ActionStablecoinFee: r.data.ActionStablecoinFee.abi, ConditionTimeStateful: r.data.ConditionTimeStateful.abi, GelatoCore: r.data.GelatoCore.abi};
+        let addresses = {DAI: r.data.DAI.address, WETH: r.data.WETH.address, ProxyFactory: r.data.GelatoUserProxyFactory.address, UniswapRouter: r.data.UniswapRouter.address, ActionStablecoinFee: r.data.ActionStablecoinFee.address, ConditionTimeStateful: r.data.ConditionTimeStateful.address, GelatoCore: r.data.GelatoCore.address};
+        setAllAbi(abis);
+        setAllAddresses(addresses);
         let daiContract = new ethers.Contract(r.data.DAI.address, r.data.DAI.abi, signer);
         let wethContract = new ethers.Contract(r.data.WETH.address, r.data.WETH.abi, signer);
         let proxyFactory = new ethers.Contract(r.data.GelatoUserProxyFactory.address, r.data.GelatoUserProxyFactory.abi, signer);
+        let gelatoCoreContract = new ethers.Contract(r.data.GelatoCore.address, r.data.GelatoCore.abi, signer);
+        setContracts({DAI: daiContract, WETH: wethContract, ProxyFactory: proxyFactory, GelatoCore: gelatoCoreContract});
         let daiBalance = await daiContract.functions.balanceOf(address);
         let wethBalance = await wethContract.functions.balanceOf(address);
         let predicted = await proxyFactory.functions.predictProxyAddress(address, STATIC_SALT);
@@ -59,7 +62,6 @@ export default function HomePage() {
             setProxyAllowance({DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())});
         }
         setUserAddress(address);
-        setContracts({DAI: daiContract, WETH: wethContract, ProxyFactory: proxyFactory});
         setUserBalances({ETH: ethers.utils.formatEther(ethBalance.toString()), WETH: ethers.utils.formatEther(wethBalance.toString()), DAI: ethers.utils.formatEther(daiBalance.toString())});
         setIsConnected(true);
     } catch(e) {
@@ -85,7 +87,6 @@ export default function HomePage() {
             setCreateProxyProgress("You don't have enough ETH (need: "+Number(ethers.utils.formatEther(maxWeiGas.toString())).toFixed(7)+")");
         }
         let createTx = await contracts.ProxyFactory.functions.createTwo(STATIC_SALT, {gasLimit: gasLimit, gasPrice: gasPrice});
-        console.log('create!', createTx.hash);
         setCreateProxyTx(createTx.hash);
         setCreateProxyProgress("Transaction submitted...");
         await contracts.ProxyFactory.signer.provider.getTransactionReceipt(createTx.hash);
@@ -246,7 +247,7 @@ export default function HomePage() {
                                 <p><FormattedMessage {...messages.traderHeader} /></p>
                                 <p><FormattedMessage {...messages.amount} />:<input type="text" size="6" id="amountPerTrade"></input></p>
                                 <p><FormattedMessage {...messages.seconds} />:<input type="text" size="6" id="delayLength"></input></p>
-                                <p><button><FormattedMessage {...messages.traderStart} /></button></p>
+                                <p><button onClick={handleSubmitTask}><FormattedMessage {...messages.traderStart} /></button></p>
                             </span>
                         }
                         </span>
