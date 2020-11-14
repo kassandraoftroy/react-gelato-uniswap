@@ -11,8 +11,9 @@ import messages from './messages';
 import * as ethers from 'ethers';
 import axios from 'axios';
 import { useInterval } from 'utils/polling';
+import getTask from './gelatoHelpers';
 
-const STATIC_SALT = 1234321; // Static Salt For Dynamic
+const STATIC_SALT = 123456765; // Static Salt for UserProxy
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -23,8 +24,8 @@ export default function HomePage() {
   const [userBalances, setUserBalances] = useState(null);
   const [proxyAllowance, setProxyAllowance] = useState(null);
   const [contracts, setContracts] = useState(null);
-  const [allAbi, setAllAbi] = useState(null);
-  const [allAddresses, setAllAddresses] = useState(null);
+  const [abiBook, setAbiBook] = useState(null);
+  const [addressBook, setAddressBook] = useState(null);
 
   const [userAddress, setUserAddress] = useState("");
   const [proxyAddress, setProxyAddress] = useState("");
@@ -32,6 +33,8 @@ export default function HomePage() {
   const [createProxyTx, setCreateProxyTx] = useState("");
   const [approveDaiProgress, setApproveDaiProgress] = useState("");
   const [approveDaiTx, setApproveDaiTx] = useState("");
+  const [submitTaskProgress, setSubmitTaskProgress] = useState("");
+  const [submitTaskTx, setSubmitTaskTx] = useState("");
 
   const handleConnectWallet = async (_e) => {
     try {
@@ -41,26 +44,28 @@ export default function HomePage() {
         let address = await signer.getAddress();
         let ethBalance = await signer.getBalance();
         let r = await axios.post('http://127.0.0.1:3000/contracts', {}, {});
-        let abis = {DAI: r.data.DAI.abi, WETH: r.data.WETH.abi, ProxyFactory: r.data.GelatoUserProxyFactory.abi, UniswapRouter: r.data.UniswapRouter.abi, ActionStablecoinFee: r.data.ActionStablecoinFee.abi, ConditionTimeStateful: r.data.ConditionTimeStateful.abi, GelatoCore: r.data.GelatoCore.abi};
-        let addresses = {DAI: r.data.DAI.address, WETH: r.data.WETH.address, ProxyFactory: r.data.GelatoUserProxyFactory.address, UniswapRouter: r.data.UniswapRouter.address, ActionStablecoinFee: r.data.ActionStablecoinFee.address, ConditionTimeStateful: r.data.ConditionTimeStateful.address, GelatoCore: r.data.GelatoCore.address};
-        setAllAbi(abis);
-        setAllAddresses(addresses);
+        let abis = {DAI: r.data.DAI.abi, WETH: r.data.WETH.abi, ProxyFactory: r.data.GelatoUserProxyFactory.abi, UniswapRouter: r.data.UniswapRouter.abi, ActionStablecoinFee: r.data.ActionStablecoinFee.abi, ConditionTimeStateful: r.data.ConditionTimeStateful.abi, GelatoCore: r.data.GelatoCore.abi, Proxy: r.data.IGelatoUserProxy.abi};
+        let addresses = {DAI: r.data.DAI.address, WETH: r.data.WETH.address, ProxyFactory: r.data.GelatoUserProxyFactory.address, UniswapRouter: r.data.UniswapRouter.address, ActionStablecoinFee: r.data.ActionStablecoinFee.address, ConditionTimeStateful: r.data.ConditionTimeStateful.address, GelatoCore: r.data.GelatoCore.address, GelatoProvider: r.data.GelatoProvider.address, GelatoProviderModule: r.data.GelatoProviderModule.address};
+        setAbiBook(abis);
+        setAddressBook(addresses);
         let daiContract = new ethers.Contract(r.data.DAI.address, r.data.DAI.abi, signer);
         let wethContract = new ethers.Contract(r.data.WETH.address, r.data.WETH.abi, signer);
-        let proxyFactory = new ethers.Contract(r.data.GelatoUserProxyFactory.address, r.data.GelatoUserProxyFactory.abi, signer);
+        let proxyFactoryContract = new ethers.Contract(r.data.GelatoUserProxyFactory.address, r.data.GelatoUserProxyFactory.abi, signer);
         let gelatoCoreContract = new ethers.Contract(r.data.GelatoCore.address, r.data.GelatoCore.abi, signer);
-        setContracts({DAI: daiContract, WETH: wethContract, ProxyFactory: proxyFactory, GelatoCore: gelatoCoreContract});
         let daiBalance = await daiContract.functions.balanceOf(address);
         let wethBalance = await wethContract.functions.balanceOf(address);
-        let predicted = await proxyFactory.functions.predictProxyAddress(address, STATIC_SALT);
+        let predicted = await proxyFactoryContract.functions.predictProxyAddress(address, STATIC_SALT);
         setProxyAddress(predicted[0]);
-        let hasproxy = await proxyFactory.functions.isGelatoUserProxy(predicted[0]);
+        let hasproxy = await proxyFactoryContract.functions.isGelatoUserProxy(predicted[0]);
         setHasProxy(hasproxy[0]);
+        let proxyContract;
         if (hasproxy[0]) {
+            proxyContract = new ethers.Contract(predicted[0], r.data.IGelatoUserProxy.abi, signer);
             let daiAllowance = await daiContract.functions.allowance(address, predicted[0]);
             let wethAllowance = await wethContract.functions.allowance(address, predicted[0]);
             setProxyAllowance({DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())});
         }
+        setContracts({DAI: daiContract, WETH: wethContract, ProxyFactory: proxyFactoryContract, GelatoCore: gelatoCoreContract, Proxy: proxyContract});
         setUserAddress(address);
         setUserBalances({ETH: ethers.utils.formatEther(ethBalance.toString()), WETH: ethers.utils.formatEther(wethBalance.toString()), DAI: ethers.utils.formatEther(daiBalance.toString())});
         setIsConnected(true);
@@ -94,6 +99,10 @@ export default function HomePage() {
             try {
                 let hasproxy = await contracts.ProxyFactory.functions.isGelatoUserProxy(proxyAddress);
                 if (hasproxy[0]) {
+                    let proxyContract = new ethers.Contract(proxyAddress, abiBook.Proxy, contracts.DAI.signer);
+                    let contracts2 = JSON.parse(JSON.stringify(contracts));
+                    contracts2.Proxy = proxyContract;
+                    setContracts(contracts);
                     let daiAllowance = await contracts.DAI.functions.allowance(userAddress, proxyAddress);
                     let wethAllowance = await contracts.WETH.functions.allowance(userAddress, proxyAddress);
                     let allowances = {DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())};
@@ -126,6 +135,7 @@ export default function HomePage() {
         let balance = await contracts.DAI.signer.getBalance();
         if (maxWeiGas>balance) {
             setApproveDaiProgress("You don't have enough ETH (need: "+Number(ethers.utils.formatEther(maxWeiGas.toString())).toFixed(7)+")");
+            return
         } else {
             setApproveDaiProgress("Approving...");
         }
@@ -135,9 +145,9 @@ export default function HomePage() {
         await contracts.DAI.signer.provider.getTransactionReceipt(tx.hash);
         while (true) {
             try {
-                let rawDaiAllowance = await contracts.DAI.functions.allowance(userAddress, proxyAddress);
-                let newDaiAllowance = ethers.utils.formatEther(rawDaiAllowance.toString());
-                if (Number(newDaiAllowance) != Number(proxyAllowance.DAI)) {
+                let rawAllowance = await contracts.DAI.functions.allowance(userAddress, proxyAddress);
+                let newDaiAllowance = ethers.utils.formatEther(rawAllowance.toString());
+                if (Number(newDaiAllowance) == amountDai) {
                     setCreateProxyProgress("Transaction mined...");
                     let allowances = JSON.parse(JSON.stringify(proxyAllowance));
                     allowances.DAI = newDaiAllowance;
@@ -156,6 +166,40 @@ export default function HomePage() {
       } catch(e) {
           console.log("error in handleApproveDai:", e.message);
       }
+  }
+
+  const handleSubmitTask = async(_e) => {
+    try {
+        let e1 = document.getElementById('amountPerTrade');
+        let amountDai = Number(e1.value);
+        let amount = ethers.utils.parseEther(amountDai.toString());
+        let e2 = document.getElementById('delayLength');
+        let delay = Number(e2.value);
+        let task = await getTask(userAddress, proxyAddress, amount, delay, abiBook, addressBook, contracts.DAI.signer.provider);
+        console.log("encoded task!");
+        console.log("task:", task);
+        let gelatoProvider = {
+            addr: addressBook.GelatoProvider,
+            module: addressBook.GelatoProviderModule,
+        }
+        let tx = await contracts.Proxy.submitTaskCycle(gelatoProvider, [task], 0, 5, {gasLimit: 1000000, gasPrice: ethers.utils.parseUnits("10", "gwei")});
+        setSubmitTaskProgress("Task transaction submitted...");
+        e1.value="";
+        e2.value="";
+        setSubmitTaskTx(tx.hash);
+        let receipt;
+        while (true) {
+            receipt = await contracts.DAI.signer.provider.getTransactionReceipt(tx.hash);
+            if (receipt != null) {
+                break
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+        setSubmitTaskProgress("Task transaction mined...");
+    } catch(e) {
+        console.log("error in handleSubmitTask:", e.message);
+    }
   }
 
   const load = async () => {
@@ -178,8 +222,8 @@ export default function HomePage() {
         let balances = {ETH: ethers.utils.formatEther(ethBalance.toString()), WETH: ethers.utils.formatEther(wethBalance.toString()), DAI: ethers.utils.formatEther(daiBalance.toString())};
         setUserBalances(balances);
         if (hasProxy) {
-            let daiAllowance = await contracts.DAI.functions.allowance(address, predicted[0]);
-            let wethAllowance = await contracts.WETH.functions.allowance(address, predicted[0]);
+            let daiAllowance = await contracts.DAI.functions.allowance(userAddress, proxyAddress);
+            let wethAllowance = await contracts.WETH.functions.allowance(userAddress, proxyAddress);
             let allowances = {DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())};
             setProxyAllowance(allowances);
         }
@@ -248,6 +292,7 @@ export default function HomePage() {
                                 <p><FormattedMessage {...messages.amount} />:<input type="text" size="6" id="amountPerTrade"></input></p>
                                 <p><FormattedMessage {...messages.seconds} />:<input type="text" size="6" id="delayLength"></input></p>
                                 <p><button onClick={handleSubmitTask}><FormattedMessage {...messages.traderStart} /></button></p>
+                                <p>{submitTaskProgress} {submitTaskTx!="" ? <a href={'https://rinkeby.etherscan.io/tx/'+submitTaskTx.toString()}>view tx</a>:<span></span>}</p>
                             </span>
                         }
                         </span>

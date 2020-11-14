@@ -48,15 +48,12 @@ contract ActionStablecoinFee is GelatoActionsStandard {
         public
         virtual
         delegatecallOnly("ActionStablecoinFee.action")
-        returns (uint256 receiveAmount)
+        returns (uint256)
     {
-
-        // TODO: on mainnet gasPrice needs oracle too
-        // gasOracleL
         (uint80 _a, int price, uint _b, uint _c, uint80 _d) = priceOracle.latestRoundData();
 
         // DISABLED FOR TESTNET: Get gas price from oracle
-        //(uint80 _, int gasPrice, uint _, uint _, uint80 _) = gasOracle.latestRoundData();
+        // (uint80 _, int gasPrice, uint _, uint _, uint80 _) = gasOracle.latestRoundData();
         // INSTEAD: 80 gwei fixed gas price on testnet
         uint256 gasPrice = 80000000000;
 

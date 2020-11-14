@@ -5,7 +5,9 @@ if (process.env.DAPP_INFURA_ID==null || process.env.DAPP_PROVIDER_PK==null || pr
     console.log("\n !! IMPORTANT !!\n Must set all .env variables before running server (see README.md)");
     throw "run setup before starting server"
 }
-
+const ethers = require('ethers');
+const externalProviderAddress = (new ethers.Wallet(process.env.DAPP_PROVIDER_PK)).address;
+const actionStablecoinFeeAddress = process.env.DAPP_FEE_ACTION_ADDR;
 const express = require('express');
 const logger = require('./logger');
 const argv = require('./argv');
@@ -38,6 +40,7 @@ const customHost = argv.host || process.env.HOST;
 const host = customHost || null; // Let http.Server use its default IPv6/4 host
 const prettyHost = customHost || 'localhost';
 
+// expose a single API endpoint for reading contract abis from the backend
 app.post('/contracts', (_req, res) => {
     let coreArtifact = hre.artifacts.readArtifactSync('GelatoCore');
     let proxyFactoryArtifact = hre.artifacts.readArtifactSync('IGelatoUserProxyFactory');
@@ -51,11 +54,12 @@ app.post('/contracts', (_req, res) => {
     let daiAddress = hre.network.config.addressBook.erc20.DAI;
     let uniAddress = hre.network.config.addressBook.uniswapV2.router2;
     let providerModuleAddress = hre.network.config.deployments.ProviderModuleGelatoUserProxy;
-    let feeActionAddress = process.env.DAPP_FEE_ACTION_ADDR;
+    let feeActionAddress = actionStablecoinFeeAddress;
+    let gelatoProviderAddress = externalProviderAddress;
     let coreAddress = hre.network.config.deployments.GelatoCore;
     let executor = hre.network.config.addressBook.gelatoExecutor.default;
     let conditionTimeAddress = hre.network.config.deployments.ConditionTimeStateful;
-    let contracts = {GelatoUserProxyFactory: {abi: proxyFactoryArtifact.abi, address: proxyFactoryAddress}, WETH: {abi:erc20Artifact.abi, address: wethAddress}, DAI: {abi:erc20Artifact.abi, address: daiAddress}, GelatoProviderModule: {address: providerModuleAddress}, UniswapRouter: {address: uniAddress, abi: uniArtifact.abi}, IGelatoUserProxy:{abi: proxyArtifact.abi}, GelatoCore: {abi: coreArtifact.abi, address: coreAddress}, GelatoExecutor: {address: executor}, ActionStablecoinFee: {abi: feeActionArtifact.abi, address: feeActionAddress}, ConditionTimeStateful: {address: conditionTimeAddress, abi: conditionTimeArtifact.abi}};
+    let contracts = {GelatoUserProxyFactory: {abi: proxyFactoryArtifact.abi, address: proxyFactoryAddress}, WETH: {abi:erc20Artifact.abi, address: wethAddress}, DAI: {abi:erc20Artifact.abi, address: daiAddress}, GelatoProviderModule: {address: providerModuleAddress}, UniswapRouter: {address: uniAddress, abi: uniArtifact.abi}, IGelatoUserProxy:{abi: proxyArtifact.abi}, GelatoCore: {abi: coreArtifact.abi, address: coreAddress}, GelatoExecutor: {address: executor}, ActionStablecoinFee: {abi: feeActionArtifact.abi, address: feeActionAddress}, ConditionTimeStateful: {address: conditionTimeAddress, abi: conditionTimeArtifact.abi}, GelatoProvider: {address: gelatoProviderAddress}};
     return res.json(contracts);
 });
 
