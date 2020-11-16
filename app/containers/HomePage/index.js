@@ -12,14 +12,30 @@ import * as ethers from 'ethers';
 import axios from 'axios';
 import { useInterval } from 'utils/polling';
 import getTask from './gelatoHelpers';
+import StepWizard from 'react-step-wizard';
+import ConnectWalletStep from 'components/ConnectWalletStep';
+import CreateProxyStep from 'components/CreateProxyStep';
+import ScheduleUniswapStep from 'components/ScheduleUniswapStep';
+import StepNavigation from 'components/StepNavigation';
+import './transitions.less';
+import './wizard.less';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
-const STATIC_SALT = 123456765; // Static Salt for UserProxy
+const STATIC_SALT = 12345676; // Static Salt for UserProxy
+
+const transitions = {
+    enterRight: `animated enterRight`,
+    enterLeft: `animated enterLeft`,
+    exitRight: `animated exitRight`,
+    exitLeft: `animated exitLeft`,
+    intro: `animated intro`,
+};
 
 export default function HomePage() {
-  const [isLoaded, setIsLoaded] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [hasProxy, setHasProxy] = useState(false);
-  const [isRunningTaskLoop, setIsRunningTaskLoop] = useState(false);
+  const [isProxyLoaded, setIsProxyLoaded] = useState(false);
+  const [isSubmitTask, setIsSubmitTask] = useState(false);
+  const [isCancelTask, setIsCancelTask] = useState(false);
 
   const [userBalances, setUserBalances] = useState(null);
   const [proxyAllowance, setProxyAllowance] = useState(null);
@@ -31,10 +47,32 @@ export default function HomePage() {
   const [proxyAddress, setProxyAddress] = useState("");
   const [createProxyProgress, setCreateProxyProgress] = useState("");
   const [createProxyTx, setCreateProxyTx] = useState("");
-  const [approveDaiProgress, setApproveDaiProgress] = useState("");
-  const [approveDaiTx, setApproveDaiTx] = useState("");
+
+  const [amountInput, setAmountInput] = useState("");
+  const [delayInput, setDelayInput] = useState("");
+  const [allowanceInput, setAllowanceInput] = useState("");
   const [submitTaskProgress, setSubmitTaskProgress] = useState("");
   const [submitTaskTx, setSubmitTaskTx] = useState("");
+
+  const handleAmountInput = (e) => {
+      setAmountInput(e.target.value);
+  }
+
+  const handleDelayInput = (e) => {
+      setDelayInput(e.target.value);
+  }
+
+  const handleAllowanceInput = (e) => {
+      setAllowanceInput(e.target.value);
+  }
+
+  const switchSubmitTask = (_e) => {
+      setIsSubmitTask(!isSubmitTask);
+  }
+
+  const switchCancelTask = (_e) => {
+    setIsCancelTask(!isCancelTask);
+  }
 
   const handleConnectWallet = async (_e) => {
     try {
@@ -55,9 +93,9 @@ export default function HomePage() {
         let daiBalance = await daiContract.functions.balanceOf(address);
         let wethBalance = await wethContract.functions.balanceOf(address);
         let predicted = await proxyFactoryContract.functions.predictProxyAddress(address, STATIC_SALT);
-        setProxyAddress(predicted[0]);
-        let hasproxy = await proxyFactoryContract.functions.isGelatoUserProxy(predicted[0]);
-        setHasProxy(hasproxy[0]);
+        setProxyAddress(predicted.toString());
+        let hasproxy = await proxyFactoryContract.functions.isGelatoUserProxy(predicted.toString());
+        setIsProxyLoaded(hasproxy[0]);
         let proxyContract;
         if (hasproxy[0]) {
             proxyContract = new ethers.Contract(predicted[0], r.data.IGelatoUserProxy.abi, signer);
@@ -75,7 +113,7 @@ export default function HomePage() {
     }
   }
 
-  const handleGetProxy = async (_e) => {
+  const handleCreateProxy = async (_e) => {
       try {
         let hasproxy = await contracts.ProxyFactory.functions.isGelatoUserProxy(proxyAddress);
         if (hasproxy[0]) {
@@ -107,7 +145,7 @@ export default function HomePage() {
                     let wethAllowance = await contracts.WETH.functions.allowance(userAddress, proxyAddress);
                     let allowances = {DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())};
                     setProxyAllowance(allowances);
-                    setHasProxy(hasproxy[0]);
+                    setIsProxyLoaded(hasproxy[0]);
                     setCreateProxyTx("");
                 } else {
                     console.log("waiting for proxy tx...");
@@ -123,58 +161,31 @@ export default function HomePage() {
       }
   }
 
-  const handleApproveDai = async (_e) => {
-      try {
-        let ele = document.getElementById('daiAllowance');
-        let amountDai = Number(ele.value);
-        let amount = ethers.utils.parseEther(amountDai.toString());
-        ele.value = "";
-        let gasLimit = 100000;
-        let gasPrice = await contracts.DAI.signer.provider.getGasPrice();
-        let maxWeiGas = gasPrice*gasLimit;
-        let balance = await contracts.DAI.signer.getBalance();
-        if (maxWeiGas>balance) {
-            setApproveDaiProgress("You don't have enough ETH (need: "+Number(ethers.utils.formatEther(maxWeiGas.toString())).toFixed(7)+")");
-            return
-        } else {
-            setApproveDaiProgress("Approving...");
-        }
-        let tx = await contracts.DAI.functions.approve(proxyAddress, amount, {gasLimit: gasLimit, gasPrice: gasPrice});
-        setApproveDaiTx(tx.hash);
-        setApproveDaiProgress("Transaction submitted...");
-        await contracts.DAI.signer.provider.getTransactionReceipt(tx.hash);
-        while (true) {
-            try {
-                let rawAllowance = await contracts.DAI.functions.allowance(userAddress, proxyAddress);
-                let newDaiAllowance = ethers.utils.formatEther(rawAllowance.toString());
-                if (Number(newDaiAllowance) == amountDai) {
-                    setCreateProxyProgress("Transaction mined...");
-                    let allowances = JSON.parse(JSON.stringify(proxyAllowance));
-                    allowances.DAI = newDaiAllowance;
-                    setApproveDaiProgress("");
-                    setApproveDaiTx("");
-                    setProxyAllowance(allowances);
-                } else {
-                    console.log("waiting for approve tx...");
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-            } catch(e) {
-                console.log("error waiting for approve tx...", e.message);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-        }
-      } catch(e) {
-          console.log("error in handleApproveDai:", e.message);
-      }
-  }
-
   const handleSubmitTask = async(_e) => {
+    let amount;
+    let delay;
+    let allowance;
+    console.log('submitting task');
     try {
-        let e1 = document.getElementById('amountPerTrade');
-        let amountDai = Number(e1.value);
-        let amount = ethers.utils.parseEther(amountDai.toString());
-        let e2 = document.getElementById('delayLength');
-        let delay = Number(e2.value);
+        let amountDai = Number(amountInput);
+        amount = ethers.utils.parseEther(amountDai.toString());
+        delay = Number(delayInput);
+        let maxAllowanceDai = Number(allowanceInput);
+        allowance = ethers.utils.parseEther(maxAllowanceDai.toString());
+        await contracts.DAI.functions.balanceOf(userAddress);
+    } catch(e) {
+        console.log('error here:', e.message);
+    }
+    if (amount==null) {
+        setSubmitTaskProgress("Malformed inputs");
+        return
+    }
+    if (allowance==null) {
+        allowance = await contracts.DAI.functions.balanceOf(userAddress);
+    }
+    try {
+        let approveTx = await contracts.DAI.functions.approve(proxyAddress, allowance.toString(), {gasLimit: 150000, gasPrice: ethers.utils.parseUnits("10", "gwei")});
+        setSubmitTaskProgress("Approving proxy to spend dai...");
         let task = await getTask(userAddress, proxyAddress, amount, delay, abiBook, addressBook, contracts.DAI.signer.provider);
         console.log("encoded task!");
         console.log("task:", task);
@@ -182,10 +193,8 @@ export default function HomePage() {
             addr: addressBook.GelatoProvider,
             module: addressBook.GelatoProviderModule,
         }
-        let tx = await contracts.Proxy.submitTaskCycle(gelatoProvider, [task], 0, 5, {gasLimit: 1000000, gasPrice: ethers.utils.parseUnits("10", "gwei")});
+        let tx = await contracts.Proxy.submitTaskCycle(gelatoProvider, [task], 0, 1000, {gasLimit: 1000000, gasPrice: ethers.utils.parseUnits("10", "gwei")});
         setSubmitTaskProgress("Task transaction submitted...");
-        e1.value="";
-        e2.value="";
         setSubmitTaskTx(tx.hash);
         let receipt;
         while (true) {
@@ -196,23 +205,17 @@ export default function HomePage() {
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
-        setSubmitTaskProgress("Task transaction mined...");
+        setSubmitTaskProgress(JSON.stringify(receipt.logs[0].data));
+        setIsSubmitTask(false);
     } catch(e) {
+        console.log()
         console.log("error in handleSubmitTask:", e.message);
     }
   }
 
-  const load = async () => {
-    try {
-        setIsLoaded(true);
-    } catch(e) {
-        console.log("error in load:", e.message);
-    }
-  }
-
-  useEffect(() => {
-    (async () => await load())();
-  }, []);
+  const handleCancelTask = () => {
+      console.log('handle cancel task');
+  };
 
   useInterval(async ()=>{
     if (isConnected) {
@@ -221,7 +224,7 @@ export default function HomePage() {
         let wethBalance = await contracts.WETH.functions.balanceOf(userAddress);
         let balances = {ETH: ethers.utils.formatEther(ethBalance.toString()), WETH: ethers.utils.formatEther(wethBalance.toString()), DAI: ethers.utils.formatEther(daiBalance.toString())};
         setUserBalances(balances);
-        if (hasProxy) {
+        if (isProxyLoaded) {
             let daiAllowance = await contracts.DAI.functions.allowance(userAddress, proxyAddress);
             let wethAllowance = await contracts.WETH.functions.allowance(userAddress, proxyAddress);
             let allowances = {DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())};
@@ -231,80 +234,50 @@ export default function HomePage() {
   }, 3000);
 
   return (
-    <div>
-    {isLoaded ?
-        <div>
-            <h1>
-                &nbsp;<FormattedMessage {...messages.header} />
-            </h1>
-            <div>
-                <div className="borderedSquare centered">
-                    {isConnected ?
-                        <span>
-                            <h2><FormattedMessage {...messages.walletHeader} /></h2>
-                            <p><FormattedMessage {...messages.addressLabel} />:&nbsp;{userAddress.substring(0, 7)+'...'}</p>
-                            <p>ETH:&nbsp;{userBalances.ETH}</p>
-                            <p>DAI:&nbsp;{userBalances.DAI}</p>
-                            <p>WETH:&nbsp;{userBalances.WETH}</p>
-                        </span>
-                    :
-                        <p>
-                            <br></br>
-                            <button onClick={handleConnectWallet}><FormattedMessage {...messages.connectWallet} /></button>
-                        </p>
-                    }
-                </div>
-                <div className="borderedSquare centered">
-                    {isConnected ?
-                        <span>
-                        {hasProxy ?
-                            <span>
-                                <p><FormattedMessage {...messages.haveProxy} /> <span className="green">✔</span></p>
-                                <p>DAI <FormattedMessage {...messages.allowance} />: {proxyAllowance.DAI}</p>
-                                <p>WETH <FormattedMessage {...messages.allowance} />: {proxyAllowance.WETH}</p>
-                                <br></br>
-                                <p><FormattedMessage {...messages.amount} />:<input type="text" size="6" id="daiAllowance"></input> <button onClick={handleApproveDai}><FormattedMessage {...messages.approve} /> DAI</button></p>
-                                <p>{approveDaiProgress} {approveDaiTx!="" ? <a className="classicLink" href={'https://rinkeby.etherscan.io/tx/'+approveDaiTx.toString()}>view tx</a>:<span></span>}</p>
-                            </span>
-                            :
-                            <span>
-                                <br></br>
-                                <p><button onClick={handleGetProxy}><FormattedMessage {...messages.getProxy} /></button></p>
-                                <p>{createProxyProgress} {createProxyTx!="" ? <a className="classicLink" href={'https://rinkeby.etherscan.io/tx/'+createProxyTx.toString()}>view tx</a>:<span></span>}</p>
-                            </span>
-                        }
-                        </span>
-                    :
-                        <div className="greySquare"></div>
-                    }
-                </div>
-                <div className="borderedSquare centered">
-                    {isConnected ?
-                        <span>
-                        {isRunningTaskLoop ?
-                            <span>
-                                <p><FormattedMessage {...messages.traderRunning} /></p>
-                                <p><button><FormattedMessage {...messages.traderStop} /></button></p>
-                            </span>
-                        :
-                            <span>
-                                <p><FormattedMessage {...messages.traderHeader} /></p>
-                                <p><FormattedMessage {...messages.amount} />:<input type="text" size="6" id="amountPerTrade"></input></p>
-                                <p><FormattedMessage {...messages.seconds} />:<input type="text" size="6" id="delayLength"></input></p>
-                                <p><button onClick={handleSubmitTask}><FormattedMessage {...messages.traderStart} /></button></p>
-                                <p>{submitTaskProgress} {submitTaskTx!="" ? <a href={'https://rinkeby.etherscan.io/tx/'+submitTaskTx.toString()}>view tx</a>:<span></span>}</p>
-                            </span>
-                        }
-                        </span>
-                    :
-                        <div className="greySquare"></div>
-                    }
+        <div className='container'>
+            <br></br>
+            <h1 className='centered myFont'><FormattedMessage {...messages.header} /></h1>
+            <div className='jumbotron grad'>
+                <div className='row'>
+                    <div className={`col-12 col-sm-6 offset-sm-3 rsw-wrapper myFont`}>
+                        <StepWizard 
+                            transitions={transitions} 
+                            nav={<StepNavigation />}
+                            onStepChange={() => {setIsSubmitTask(false); setIsCancelTask(false)}}
+                        >
+                            <ConnectWalletStep 
+                                isConnected={isConnected} 
+                                walletHandler={handleConnectWallet} 
+                                userBalances={userBalances} 
+                                userAddress={userAddress}
+                            />
+                            <CreateProxyStep 
+                                isConnected={isConnected}
+                                isProxyLoaded={isProxyLoaded}
+                                createProxyHandler={handleCreateProxy}
+                                createProxyProgress={createProxyProgress}
+                                createProxyTx={createProxyTx}
+                                proxyAllowance={proxyAllowance}
+                            />
+                            <ScheduleUniswapStep 
+                                isConnected={isConnected}
+                                isProxyLoaded={isProxyLoaded}
+                                isSubmitTask={isSubmitTask}
+                                isCancelTask={isCancelTask}
+                                submitTaskHandler={handleSubmitTask}
+                                cancelTaskHandler={handleCancelTask}
+                                amountHandler={handleAmountInput}
+                                delayHandler={handleDelayInput}
+                                allowanceHandler={handleAllowanceInput}
+                                switchSubmitTask={switchSubmitTask}
+                                switchCancelTask={switchCancelTask}
+                                submitTaskProgress={submitTaskProgress}
+                                submitTaskTx={submitTaskTx}
+                            />
+                        </StepWizard>
+                    </div>
                 </div>
             </div>
         </div>
-    :
-        <div>loading...</div>
-    }
-    </div>
   );
 }

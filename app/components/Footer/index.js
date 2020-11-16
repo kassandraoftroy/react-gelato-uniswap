@@ -7,7 +7,7 @@ import messages from './messages';
 
 function Footer() {
   return (
-    <Wrapper>
+    <Wrapper className="myFont">
       <section>
         <FormattedMessage {...messages.tagline} />
       </section>

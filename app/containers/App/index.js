@@ -14,6 +14,7 @@ import HomePage from 'containers/HomePage/Loadable';
 import NotFoundPage from 'containers/NotFoundPage/Loadable';
 import Footer from 'components/Footer';
 import GlobalStyle from '../../global-styles';
+import './less/app.less';
 
 export default function App() {
   return (

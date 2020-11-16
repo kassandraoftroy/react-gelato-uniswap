@@ -1,14 +1,18 @@
 import styled from 'styled-components';
 
 const Wrapper = styled.footer`
-  position: absolute;
+  position: relative;
   display: flex;
   justify-content: space-between;
   flex-direction: row;
-  padding: 1em 1em;
-  border-top: 1px solid #666;
-  width: 90%;
+  border-top: 1px solid black;
+  width: 100%;
   bottom: 0;
+  padding-right: 4em;
+  padding-left: 1em;
+  padding-top: 1em;
+  padding-bottom: 0.5em;
+  background-color: white;
 `;
 
 export default Wrapper;

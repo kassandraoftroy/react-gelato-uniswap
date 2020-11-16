@@ -8,7 +8,7 @@ const DELEGATECALL_OP = 1;
 var deployAction = async (wallet) => {
 	let artifact = hre.artifacts.readArtifactSync('ActionStablecoinFee');
     let factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
-	let deployTx = factory.getDeployTransaction(wallet.address, "0x8A753747A1Fa494EC906cE90E9f37563A8AF630e", "0x8A753747A1Fa494EC906cE90E9f37563A8AF630e", "0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa", 400000);
+	let deployTx = factory.getDeployTransaction(wallet.address, "0x8A753747A1Fa494EC906cE90E9f37563A8AF630e", "0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa", 400000);
 	deployTx.gasLimit = 4000000;
 	deployTx.gasPrice = ethers.utils.parseUnits("10", "gwei");
 	try {

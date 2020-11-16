@@ -49,6 +49,7 @@ app.post('/contracts', (_req, res) => {
     let erc20Artifact = hre.artifacts.readArtifactSync('IERC20');
     let feeActionArtifact = hre.artifacts.readArtifactSync('ActionStablecoinFee');
     let conditionTimeArtifact = hre.artifacts.readArtifactSync('ConditionTimeStateful');
+    let aggregatorArtifact = hre.artifacts.readArtifactSync('AggregatorV3Interface');
     let proxyFactoryAddress = hre.network.config.deployments.GelatoUserProxyFactory;
     let wethAddress = hre.network.config.addressBook.erc20.WETH;
     let daiAddress = hre.network.config.addressBook.erc20.DAI;
@@ -59,7 +60,7 @@ app.post('/contracts', (_req, res) => {
     let coreAddress = hre.network.config.deployments.GelatoCore;
     let executor = hre.network.config.addressBook.gelatoExecutor.default;
     let conditionTimeAddress = hre.network.config.deployments.ConditionTimeStateful;
-    let contracts = {GelatoUserProxyFactory: {abi: proxyFactoryArtifact.abi, address: proxyFactoryAddress}, WETH: {abi:erc20Artifact.abi, address: wethAddress}, DAI: {abi:erc20Artifact.abi, address: daiAddress}, GelatoProviderModule: {address: providerModuleAddress}, UniswapRouter: {address: uniAddress, abi: uniArtifact.abi}, IGelatoUserProxy:{abi: proxyArtifact.abi}, GelatoCore: {abi: coreArtifact.abi, address: coreAddress}, GelatoExecutor: {address: executor}, ActionStablecoinFee: {abi: feeActionArtifact.abi, address: feeActionAddress}, ConditionTimeStateful: {address: conditionTimeAddress, abi: conditionTimeArtifact.abi}, GelatoProvider: {address: gelatoProviderAddress}};
+    let contracts = {GelatoUserProxyFactory: {abi: proxyFactoryArtifact.abi, address: proxyFactoryAddress}, WETH: {abi:erc20Artifact.abi, address: wethAddress}, DAI: {abi:erc20Artifact.abi, address: daiAddress}, GelatoProviderModule: {address: providerModuleAddress}, UniswapRouter: {address: uniAddress, abi: uniArtifact.abi}, IGelatoUserProxy:{abi: proxyArtifact.abi}, GelatoCore: {abi: coreArtifact.abi, address: coreAddress}, GelatoExecutor: {address: executor}, ActionStablecoinFee: {abi: feeActionArtifact.abi, address: feeActionAddress}, ConditionTimeStateful: {address: conditionTimeAddress, abi: conditionTimeArtifact.abi}, GelatoProvider: {address: gelatoProviderAddress}, IAggregatorV3: {abi: aggregatorArtifact.abi}};
     return res.json(contracts);
 });
 
