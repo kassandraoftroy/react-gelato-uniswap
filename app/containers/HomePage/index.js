@@ -21,7 +21,7 @@ import './transitions.less';
 import './wizard.less';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const STATIC_SALT = 1111112; // Static Salt for UserProxy
+const STATIC_SALT = 987654321; // Static Salt for UserProxy
 
 const transitions = {
     enterRight: `animated enterRight`,

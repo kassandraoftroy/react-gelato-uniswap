@@ -1,7 +1,6 @@
 /* eslint consistent-return:0 import/order:0 */
 require("dotenv").config();
 if (process.env.DAPP_INFURA_ID==null || process.env.DAPP_PROVIDER_PK==null || process.env.DAPP_FEE_ACTION_ADDR==null) {
-    console.log(process.env.DAPP_INFURA_ID, process.env.DAPP_PROVIDER_PK, process.env.DAPP_FEE_ACTION_ADDR);
     console.log("\n !! IMPORTANT !!\n Must set all .env variables before running server (see README.md)");
     throw "run setup before starting server"
 }

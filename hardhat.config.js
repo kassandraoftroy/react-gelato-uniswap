@@ -1,6 +1,10 @@
 require("dotenv").config();
 const INFURA_ID = process.env.DAPP_INFURA_ID;
 const PROVIDER_PK = process.env.DAPP_PROVIDER_PK;
+if (PROVIDER_PK==null || PROVIDER_PK==undefined || INFURA_ID==null || INFURA_ID==undefined) {
+    console.log("\n !! IMPORTANT !!\n Must set .env vars before running hardhat");
+    throw "set env variables";
+}
 
 module.exports = {
     defaultNetwork: "rinkeby",

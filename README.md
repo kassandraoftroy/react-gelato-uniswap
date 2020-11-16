@@ -1,41 +1,42 @@
 # react-gelato-uniswap
-A demo react app for automated trading on uniswap using gelato
 
-## install
+A demo react app for automated trading on uniswap using gelato.
 
-1. clone repo, enter root directory
-2. npm install
-3. npx hardhat compile
+To interact with this app you'll need the [metamask browser extension](https://metamask.io)
 
-To interact with this app you'll also need the [metamask browser extension](https://metamask.io)
+You'll also need some Rinkeby ETH and Rinkeby DAI in your wallet. 
 
-## setup 
+[Here is a rinkeby faucet](https://faucet.rinkeby.io/) to get you some test ether. 
 
-Before running the react app, you must set three variables in the .env file of the root directory:
+The Rinkeby DAI contract ([0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa](https://rinkeby.etherscan.io/address/0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa)) has an `allocateTo(address,uint256)` method for funding yourself. If you have trouble you can ping me and I'll happily send you some.
 
-`DAPP_INFURA_ID` (Project ID from infura)
+Test the app [here](http://157.245.245.34:3000) or you can run it locally by following the stps below.
 
-`DAPP_PROVIDER_PK` (0x prefixed ethereum private key)
+## run server
 
-`DAPP_FEE_ACTION_ADDR` (see below)
+1. Clone repo, enter root directory
 
+2. `npm install` (install dependencies)
 
-1. Get an [Infura Project ID](https://infura.io) if you don't already have one, then set it to `DAPP_INFURA_ID` in the .env file
-2. Choose an ethereum keypair to be the Gelato Provider. Set the hex private key (with 0x prefix) to `DAPP_PROVIDER_PK` in the .env file.
-3. Fund the Gelato Provider address with at least 3 rinkeby ether. [Here is a faucet](https://faucet.rinkeby.io/)
-4. Run this command: `node scripts/setupGelatoProvider.js 2`
-5. Set `DAPP_FEE_ACTION_ADDR` with output from this script.
+3. `touch .env` (create .env file)
 
-The script in Step 4 instanciates the provider, deploys the ActionStablecoinFee contract, whitelists the dapp TaskSpec, and provides 2 ETH to the Gelato network.
+4. Get an [Infura Project ID](https://infura.io) if you don't already have one, then set it to `DAPP_INFURA_ID` in the `.env` file.
+
+5. Choose an ethereum keypair to be your Gelato Provider. Set the hex private key (with 0x prefix) to `DAPP_PROVIDER_PK` in the `.env` file
+
+6. `npx hardhat compile` (compiles smart contracts)
+
+7. Fund the Gelato Provider address with at least 4 rinkeby ether. [Here is a faucet](https://faucet.rinkeby.io/)
+
+8. `node scripts/setupGelatoProvider.js 3` (run setup script)
+
+9. Set `DAPP_FEE_ACTION_ADDR` in the `.env` file with the contract address provided from the script in step 8.
+
+10. `npm start` (run server on port 3000)
+
+The script in Step 8 instanciates the provider, deploys the ActionStablecoinFee contract, whitelists the dapp TaskSpec, and provides 3 ETH to the Gelato network.
 
 You can always re-run this script to either top up the provider, deploy a new ActionStablecoinFee contract, or whitelist a new TaskSpec.
 
-You'll also need some Rinkeby DAI (here: [0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa](https://rinkeby.etherscan.io/address/0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa)). You can DAI from the contract by calling the contract's `allocateTo(address,uint256)` function. If you have issues you can also ping [me](https://github.com/superarius) and I'll send you some.
-
-## run 
-
-npm start
-
-(runs on port 3000)
 
 
