@@ -6,7 +6,7 @@ Test the app on Rinkeby testnet [right now](http://157.245.245.34:3000) 🎉
 
 Or you can run it locally by following the steps in [run server](https://github.com/superarius/react-gelato-uniswap#run-server).
 
-## usage
+## demo
 
 To interact with this app you'll need the [metamask browser extension](https://metamask.io)
 
