@@ -8,8 +8,8 @@ const DELEGATECALL_OP = 1;
 var deployAction = async (wallet) => {
 	let artifact = hre.artifacts.readArtifactSync('ActionStablecoinFee');
     let factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
-	let deployTx = factory.getDeployTransaction(wallet.address, "0x8A753747A1Fa494EC906cE90E9f37563A8AF630e", "0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa", 400000);
-	deployTx.gasLimit = 4000000;
+	let deployTx = factory.getDeployTransaction(wallet.address, "0x8A753747A1Fa494EC906cE90E9f37563A8AF630e", "0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa", 450000, 80000000000);
+	deployTx.gasLimit = 3500000;
 	deployTx.gasPrice = ethers.utils.parseUnits("10", "gwei");
 	try {
         let tx = await wallet.sendTransaction(deployTx);
@@ -93,7 +93,7 @@ var setupProvider = async (wallet, actionStablecoinFeeAddress, fundsToProvide) =
 
     const gasPriceCeil = ethers.utils.parseUnits("80", "gwei");
   
-    const gelatoUniswapTaskSpec = {
+    const gelatoUniswapTaskSpec1 = {
       conditions: [conditionTimeStatefulAddress],
       actions: [
         actionStablecoinFee,
@@ -105,30 +105,49 @@ var setupProvider = async (wallet, actionStablecoinFeeAddress, fundsToProvide) =
       gasPriceCeil: gasPriceCeil,
     };
 
+    const gelatoUniswapTaskSpec2 = {
+        conditions: [conditionTimeStatefulAddress],
+        actions: [
+          actionTransferFrom,
+          actionTransferFrom,
+          actionApproveUniswapRouter,
+          actionSwapTokensUniswap,
+          actionUpdateConditionTime,
+        ],    
+        gasPriceCeil: gasPriceCeil,     
+    };
+
     let gelatoCore = new ethers.Contract(gelatoCoreAddress, gelatoCoreAbi, wallet);
     const currentProviderFunds = await gelatoCore.providerFunds(myProviderAddress);
     const assignedExecutor = await gelatoCore.executorByProvider(myProviderAddress);
-    const taskSpecProviderStatus = await gelatoCore.isTaskSpecProvided(myProviderAddress, gelatoUniswapTaskSpec);
+    const taskSpecProviderStatus1 = await gelatoCore.isTaskSpecProvided(myProviderAddress, gelatoUniswapTaskSpec1);
+    const taskSpecProviderStatus2 = await gelatoCore.isTaskSpecProvided(myProviderAddress, gelatoUniswapTaskSpec2);
+    let tasks = [];
+    if (taskSpecProviderStatus1 === "TaskSpecNotProvided") {
+        tasks.push(gelatoUniswapTaskSpec1);
+    }
+    if (taskSpecProviderStatus2 === "TaskSpecNotProvided") {
+        tasks.push(gelatoUniswapTaskSpec2);
+    }
     const noExecutorAssigned = assignedExecutor === ethers.constants.AddressZero ? true : false;
-    const noTaskSpecProvided = taskSpecProviderStatus === "TaskSpecNotProvided" ? true : false;
     const moduleIsProvided = await gelatoCore.isModuleProvided(myProviderAddress, providerModuleGelatoUserProxyAddress);
     let value;
     if (fundsToProvide == null || !currentProviderFunds.lt(fundsToProvide)) {
         value = ethers.constants.Zero;
     } else {
-        value = fundsToProvide;
+        value = fundsToProvide-currentProviderFunds;
     }
 
     // The single Transaction that completes Steps 2-5: gelatoCore.multiProvide()
-    if (noExecutorAssigned || noTaskSpecProvided || !moduleIsProvided || value > 0) {
+    if (noExecutorAssigned || !moduleIsProvided || value > 0) {
         let multiProvideTx;
         try {
             multiProvideTx = await gelatoCore.multiProvide(
                 noExecutorAssigned ? executorAddress : ethers.constants.AddressZero,
-                noTaskSpecProvided ? [gelatoUniswapTaskSpec] : [],
+                tasks,
                 !moduleIsProvided ? [providerModuleGelatoUserProxyAddress] : [],
             {
-                value: value,
+                value: value.toString(),
                 gasLimit: 6000000,
                 gasPrice: ethers.utils.parseUnits("10", "gwei"),
             }

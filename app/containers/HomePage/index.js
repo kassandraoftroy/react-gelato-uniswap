@@ -21,7 +21,7 @@ import './transitions.less';
 import './wizard.less';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const STATIC_SALT = 12345676; // Static Salt for UserProxy
+const STATIC_SALT = 12345654321; // Static Salt for UserProxy
 
 const transitions = {
     enterRight: `animated enterRight`,
@@ -40,8 +40,10 @@ export default function HomePage() {
   const [userBalances, setUserBalances] = useState(null);
   const [proxyAllowance, setProxyAllowance] = useState(null);
   const [contracts, setContracts] = useState(null);
+  const [proxyContract, setProxyContract] = useState(null);
   const [abiBook, setAbiBook] = useState(null);
   const [addressBook, setAddressBook] = useState(null);
+  const [lastTaskReceipt, setLastTaskReceipt] = useState(null);
 
   const [userAddress, setUserAddress] = useState("");
   const [proxyAddress, setProxyAddress] = useState("");
@@ -50,7 +52,6 @@ export default function HomePage() {
 
   const [amountInput, setAmountInput] = useState("");
   const [delayInput, setDelayInput] = useState("");
-  const [allowanceInput, setAllowanceInput] = useState("");
   const [submitTaskProgress, setSubmitTaskProgress] = useState("");
   const [submitTaskTx, setSubmitTaskTx] = useState("");
 
@@ -60,10 +61,6 @@ export default function HomePage() {
 
   const handleDelayInput = (e) => {
       setDelayInput(e.target.value);
-  }
-
-  const handleAllowanceInput = (e) => {
-      setAllowanceInput(e.target.value);
   }
 
   const switchSubmitTask = (_e) => {
@@ -90,6 +87,7 @@ export default function HomePage() {
         let wethContract = new ethers.Contract(r.data.WETH.address, r.data.WETH.abi, signer);
         let proxyFactoryContract = new ethers.Contract(r.data.GelatoUserProxyFactory.address, r.data.GelatoUserProxyFactory.abi, signer);
         let gelatoCoreContract = new ethers.Contract(r.data.GelatoCore.address, r.data.GelatoCore.abi, signer);
+        let aggregatorContract = new ethers.Contract("0x8A753747A1Fa494EC906cE90E9f37563A8AF630e", r.data.IAggregatorV3.abi, provider);
         let daiBalance = await daiContract.functions.balanceOf(address);
         let wethBalance = await wethContract.functions.balanceOf(address);
         let predicted = await proxyFactoryContract.functions.predictProxyAddress(address, STATIC_SALT);
@@ -103,7 +101,8 @@ export default function HomePage() {
             let wethAllowance = await wethContract.functions.allowance(address, predicted[0]);
             setProxyAllowance({DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())});
         }
-        setContracts({DAI: daiContract, WETH: wethContract, ProxyFactory: proxyFactoryContract, GelatoCore: gelatoCoreContract, Proxy: proxyContract});
+        setProxyContract(proxyContract);
+        setContracts({DAI: daiContract, WETH: wethContract, ProxyFactory: proxyFactoryContract, GelatoCore: gelatoCoreContract, PriceAggregator: aggregatorContract});
         setUserAddress(address);
         setUserBalances({ETH: ethers.utils.formatEther(ethBalance.toString()), WETH: ethers.utils.formatEther(wethBalance.toString()), DAI: ethers.utils.formatEther(daiBalance.toString())});
         setIsConnected(true);
@@ -123,7 +122,7 @@ export default function HomePage() {
             setCreateProxyProgress("Creating Proxy...");
         }
         let gasLimit = 4000000;
-        let gasPrice = await contracts.ProxyFactory.signer.provider.getGasPrice();
+        let gasPrice = ethers.utils.parseUnits("15", "gwei") //await contracts.ProxyFactory.signer.provider.getGasPrice();
         let maxWeiGas = gasPrice*gasLimit;
         let balance = await contracts.ProxyFactory.signer.getBalance();
         if (maxWeiGas>balance) {
@@ -138,9 +137,7 @@ export default function HomePage() {
                 let hasproxy = await contracts.ProxyFactory.functions.isGelatoUserProxy(proxyAddress);
                 if (hasproxy[0]) {
                     let proxyContract = new ethers.Contract(proxyAddress, abiBook.Proxy, contracts.DAI.signer);
-                    let contracts2 = JSON.parse(JSON.stringify(contracts));
-                    contracts2.Proxy = proxyContract;
-                    setContracts(contracts);
+                    setProxyContract(proxyContract);
                     let daiAllowance = await contracts.DAI.functions.allowance(userAddress, proxyAddress);
                     let wethAllowance = await contracts.WETH.functions.allowance(userAddress, proxyAddress);
                     let allowances = {DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())};
@@ -164,36 +161,37 @@ export default function HomePage() {
   const handleSubmitTask = async(_e) => {
     let amount;
     let delay;
-    let allowance;
-    console.log('submitting task');
     try {
         let amountDai = Number(amountInput);
         amount = ethers.utils.parseEther(amountDai.toString());
         delay = Number(delayInput);
-        let maxAllowanceDai = Number(allowanceInput);
-        allowance = ethers.utils.parseEther(maxAllowanceDai.toString());
-        await contracts.DAI.functions.balanceOf(userAddress);
     } catch(e) {
         console.log('error here:', e.message);
     }
-    if (amount==null) {
+    if (amount==null||delay==null) {
         setSubmitTaskProgress("Malformed inputs");
         return
     }
-    if (allowance==null) {
-        allowance = await contracts.DAI.functions.balanceOf(userAddress);
-    }
+    let totalBalance = await contracts.DAI.functions.balanceOf(userAddress);
+    let currentAllowance = await contracts.DAI.functions.allowance(userAddress, proxyAddress);
     try {
-        let approveTx = await contracts.DAI.functions.approve(proxyAddress, allowance.toString(), {gasLimit: 150000, gasPrice: ethers.utils.parseUnits("10", "gwei")});
-        setSubmitTaskProgress("Approving proxy to spend dai...");
-        let task = await getTask(userAddress, proxyAddress, amount, delay, abiBook, addressBook, contracts.DAI.signer.provider);
+        if (totalBalance[0]-currentAllowance[0]>0) {
+            let approveTx = await contracts.DAI.functions.approve(proxyAddress, totalBalance.toString(), {gasLimit: 150000, gasPrice: ethers.utils.parseUnits("15", "gwei")});
+            setSubmitTaskProgress("Approving proxy to spend dai...");
+            setSubmitTaskTx(approveTx.hash);
+        }
+        let prices = await contracts.PriceAggregator.functions.latestRoundData();
+        let rawPrice = Math.round(Number(ethers.utils.parseUnits(prices[1].toString(), "wei")/100000000));
+        let feeAmount = (rawPrice*300000*ethers.utils.parseUnits("40", "gwei"));
+        console.log("fee:", ethers.utils.formatEther(feeAmount.toString()));
+        let task = await getTask(userAddress, proxyAddress, feeAmount, amount, delay, abiBook, addressBook, contracts.DAI.signer.provider);
         console.log("encoded task!");
         console.log("task:", task);
         let gelatoProvider = {
             addr: addressBook.GelatoProvider,
             module: addressBook.GelatoProviderModule,
         }
-        let tx = await contracts.Proxy.submitTaskCycle(gelatoProvider, [task], 0, 1000, {gasLimit: 1000000, gasPrice: ethers.utils.parseUnits("10", "gwei")});
+        let tx = await proxyContract.submitTaskCycle(gelatoProvider, [task], 0, 3, {gasLimit: 1000000, gasPrice: ethers.utils.parseUnits("15", "gwei")});
         setSubmitTaskProgress("Task transaction submitted...");
         setSubmitTaskTx(tx.hash);
         let receipt;
@@ -205,16 +203,47 @@ export default function HomePage() {
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
-        setSubmitTaskProgress(JSON.stringify(receipt.logs[0].data));
+        let iface = new ethers.utils.Interface(abiBook.GelatoCore);
+        let decodedEventLogs = iface.decodeEventLog("LogTaskSubmitted", receipt.logs[0].data);
+        console.log(decodedEventLogs[2]);
+        let taskReceipt = decodedEventLogs[2];
+        setLastTaskReceipt(taskReceipt);
+        setSubmitTaskProgress("Your task is running!");
         setIsSubmitTask(false);
     } catch(e) {
-        console.log()
         console.log("error in handleSubmitTask:", e.message);
     }
   }
 
-  const handleCancelTask = () => {
-      console.log('handle cancel task');
+  const handleCancelTask = async () => {
+      //try {
+    let tr = {
+        id: lastTaskReceipt.id,
+        userProxy: lastTaskReceipt.userProxy,
+        provider: lastTaskReceipt.provider,
+        index: lastTaskReceipt.index,
+        tasks: lastTaskReceipt.tasks,
+        expiryDate: lastTaskReceipt.expiryDate,
+        cycleId: lastTaskReceipt.cycleId,
+        submissionsLeft: lastTaskReceipt.submissionsLeft
+    };
+    let tx = await proxyContract.cancelTask(tr, {gasLimit:1000000, gasPrice:ethers.utils.parseUnits("15", "gwei")});
+    setSubmitTaskProgress("Canceling task...");
+    setSubmitTaskTx(tx.hash);
+    while (true) {
+        let receipt = await contracts.DAI.signer.provider.getTransactionReceipt(tx.hash);
+        if (receipt != null) {
+            break
+        } else {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    }
+    setSubmitTaskProgress('Task Canceled!');
+    setIsCancelTask(false);
+      //} catch(e) {
+          //console.log('handle failed');
+          //console.log("error in handleCancelTask:", e.message);
+      //}
   };
 
   useInterval(async ()=>{
@@ -268,7 +297,6 @@ export default function HomePage() {
                                 cancelTaskHandler={handleCancelTask}
                                 amountHandler={handleAmountInput}
                                 delayHandler={handleDelayInput}
-                                allowanceHandler={handleAllowanceInput}
                                 switchSubmitTask={switchSubmitTask}
                                 switchCancelTask={switchCancelTask}
                                 submitTaskProgress={submitTaskProgress}

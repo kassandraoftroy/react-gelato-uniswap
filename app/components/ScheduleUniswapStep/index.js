@@ -26,7 +26,6 @@ const ScheduleUniswapStep = props => {
                             <div>
                                 <p><strong><FormattedMessage {...messages.amountHeader} /></strong> <input className='customInput' type="text" size="6" onChange={props.amountHandler}></input></p>
                                 <p><strong><FormattedMessage {...messages.delayHeader} /></strong> <input className='customInput' type="text" size="6" onChange={props.delayHandler}></input></p>
-                                <p><strong><FormattedMessage {...messages.allowanceHeader} /></strong> <input className='customInput' type="text" size="6" onChange={props.allowanceHandler}></input></p>
                                 <p><button className='btn btn-primary btn-block customButton' onClick={props.submitTaskHandler}><FormattedMessage {...messages.submit} /></button></p>
                                 <p><button className='btn btn-primary btn-block customButton' onClick={props.switchSubmitTask}><FormattedMessage {...messages.goBack} /></button></p>
                             </div>

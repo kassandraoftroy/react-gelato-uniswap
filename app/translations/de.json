@@ -20,5 +20,18 @@
     "gelatoDapp.components.CreateProxyStep.step": "Erstellen Sie Ihren Gelato User Proxy",
     "gelatoDapp.components.CreateProxyStep.createProxy": "erstellen gelato proxy",
     "gelatoDapp.components.CreateProxyStep.goBackHeader": "Sie müssen zuerst eine Geldbörse anschließen",
-    "gelatoDapp.components.CreateProxyStep.goBack": "zurückgehen"
+    "gelatoDapp.components.CreateProxyStep.goBack": "zurückgehen",
+    "gelatoDapp.components.ScheduleUniswapStep.uniswapHeader": "Gelato Uniswap",
+    "gelatoDapp.components.ScheduleUniswapStep.step": "Senden Sie eine Uniswap-Aufgabe, damit Gelato sie in einer Endlosschleife ausführen kann",
+    "gelatoDapp.components.ScheduleUniswapStep.stepHeader": "Schritt 3:",
+    "gelatoDapp.components.ScheduleUniswapStep.goBackWallet": "Sie müssen zuerst eine Geldbörse anschließen",
+    "gelatoDapp.components.ScheduleUniswapStep.goBackProxy": "Sie müssen zuerst einen Gelato-Proxy erstellen",
+    "gelatoDapp.components.ScheduleUniswapStep.goBack": "zurückgehen",
+    "gelatoDapp.components.ScheduleUniswapStep.submitTask": "eine Aufgabe einreichen",
+    "gelatoDapp.components.ScheduleUniswapStep.cancelTask": "eine Aufgabe stornieren",
+    "gelatoDapp.components.ScheduleUniswapStep.submit": "einreichen",
+    "gelatoDapp.components.ScheduleUniswapStep.amountHeader": "DAI pro trade:",
+    "gelatoDapp.components.ScheduleUniswapStep.delayHeader": "Verzögerung (in Sekunden):",
+    "gelatoDapp.components.ScheduleUniswapStep.cancel": "stornieren",
+    "gelatoDapp.components.ScheduleUniswapStep.taskReceiptHeader": "Task Receipt"
 }

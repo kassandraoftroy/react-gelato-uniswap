@@ -12,19 +12,20 @@ contract ActionStablecoinFee is GelatoActionsStandard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public gasProvider;
+    address public gasProviderCollector;
     AggregatorV3Interface internal priceOracle;
     //AggregatorV3Interface internal gasOracle;
     IERC20 internal token;
     uint256 public gasLimit;
     uint256 public gasPrice;
 
-    constructor(address _gasProvider, address _tradePriceAgg, address _token, uint256 _gasLimit, uint256 _gasPriceLimit) public {
-        gasProvider = _gasProvider;
+    constructor(address _gasProviderCollector, address _tradePriceAgg, address _token, uint256 _gasLimit, uint256 _gasPriceLimit) public {
+        gasProviderCollector = _gasProviderCollector;
         priceOracle = AggregatorV3Interface(_tradePriceAgg);
         // gasOracle = AggregatorV3Interface(_gasPriceAgg);
         token = IERC20(_token);
         gasLimit = _gasLimit;
+        // instead of gas oracle
         gasPrice = _gasPriceLimit;
     }
 
@@ -38,14 +39,14 @@ contract ActionStablecoinFee is GelatoActionsStandard {
     {
         (uint80 _a, int price, uint _b, uint _c, uint80 _d) = priceOracle.latestRoundData();
 
-        uint256 finalPrice = price; //TODO
+        uint256 newPrice = uint256(price);
         // !! gasOracle disabled on testnet
         // (uint80 _1, int p, uint _2, uint _3, uint80 _4) = gasOracle.latestRoundData();
         // uint256 gasPrice = uint256(p);
-
         uint256 gasConstant = gasLimit.mul(gasPrice);
-        uint256 totalRewardDai = gasConstant.mul(finalPrice).div(80).mul(100);
-        token.safeTransferFrom(_sender, receiver, totalRewardDai, "ActionStablecoinFee.action:");
+
+        uint256 totalRewardDai = gasConstant.div(100000000).mul(newPrice);
+        token.transferFrom(_sender, gasProviderCollector, totalRewardDai);
         return totalRewardDai;
     }
 }

@@ -9,7 +9,7 @@ export default defineMessages({
   },
   step: {
     id: `${scope}.step`,
-    defaultMessage: 'Sumbit a Uniswap task for Gelato to execute on a loop',
+    defaultMessage: 'Sumbit a Uniswap task for Gelato to execute on an infinite loop',
   },
   stepHeader: {
     id: `${scope}.stepHeader`,
@@ -46,10 +46,6 @@ export default defineMessages({
   delayHeader: {
     id: `${scope}.delayHeader`,
     defaultMessage: 'Delay (in seconds):',
-  },
-  allowanceHeader: {
-    id: `${scope}.allowanceHeader`,
-    defaultMessage: '(Optional) Max Allow:',
   },
   cancel: {
     id: `${scope}.cancelTask`,
