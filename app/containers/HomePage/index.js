@@ -21,7 +21,7 @@ import './transitions.less';
 import './wizard.less';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const STATIC_SALT = 12345654321; // Static Salt for UserProxy
+const STATIC_SALT = 1111112; // Static Salt for UserProxy
 
 const transitions = {
     enterRight: `animated enterRight`,
@@ -54,7 +54,7 @@ export default function HomePage() {
   const [submitTaskProgress, setSubmitTaskProgress] = useState("");
   const [submitTaskTx, setSubmitTaskTx] = useState("");
 
-  const [logMessages, setLogMessages] = useState([]);
+  const [logMessage, setLogMessage] = useState([]);
   const [currentTasks, setCurrentTasks] = useState([]);
 
   const handleAmountInput = (e) => {
@@ -111,8 +111,7 @@ export default function HomePage() {
                     }
                 }
                 if (waitingTasks.length>0) {
-                    let myLog = {message:'Welcome back! You already have a task running...', tx: null};
-                    setLogMessages([myLog]);
+                    setLogMessage('Welcome back! (task is running...)');
                     setCurrentTasks(waitingTasks);
                 }
             }
@@ -134,8 +133,6 @@ export default function HomePage() {
         if (hasproxy[0]) {
             setCreateProxyProgress("Proxy already created. Refresh page.");
             return
-        } else {
-            setCreateProxyProgress("Creating Proxy...");
         }
         let gasLimit = 4000000;
         let gasPrice = await contracts.ProxyFactory.signer.provider.getGasPrice();
@@ -143,10 +140,11 @@ export default function HomePage() {
         let balance = await contracts.ProxyFactory.signer.getBalance();
         if (maxWeiGas>balance) {
             setCreateProxyProgress("You don't have enough ETH (need: "+Number(ethers.utils.formatEther(maxWeiGas.toString())).toFixed(7)+")");
+            return
         }
         let createTx = await contracts.ProxyFactory.functions.createTwo(STATIC_SALT, {gasLimit: gasLimit, gasPrice: gasPrice});
         setCreateProxyTx(createTx.hash);
-        setCreateProxyProgress("Transaction submitted...");
+        setCreateProxyProgress("Transaction: Creating Proxy...");
         await contracts.ProxyFactory.signer.provider.getTransactionReceipt(createTx.hash);
         let i = 0;
         while (true) {
@@ -160,21 +158,23 @@ export default function HomePage() {
                     let allowances = {DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())};
                     setProxyAllowance(allowances);
                     setIsProxyLoaded(hasproxy[0]);
+                    setCreateProxyProgress("")
                     setCreateProxyTx("");
+                    break
                 } else {
                     console.log("waiting for proxy tx...");
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     i++;
                     if (i%3==1) {
-                        setCreateProxyProgress("Transaction submitted.  ");
+                        setCreateProxyProgress("Transaction: Creating Proxy.");
                     } else if (i%3==2) {
-                        setCreateProxyProgress("Transaction submitted.. ");
+                        setCreateProxyProgress("Transaction: Creating Proxy..");
                     } else {
-                        setCreateProxyProgress("Transaction submitted...");
+                        setCreateProxyProgress("Transaction: Creating Proxy...");
                     }
                 }
             } catch(e) {
-                console.log("error waiting for proxy tx...", e.message);
+                console.log("error waiting for proxy tx:", e.message);
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
@@ -191,7 +191,7 @@ export default function HomePage() {
         amount = ethers.utils.parseEther(amountDai.toString());
         delay = Number(delayInput);
     } catch(e) {
-        console.log('error here:', e.message);
+        console.log('error:', e.message);
     }
     if (amount==null||delay==null) {
         setSubmitTaskProgress("Malformed inputs");
@@ -202,18 +202,16 @@ export default function HomePage() {
     try {
         if (totalBalance[0]-currentAllowance[0]>0) {
             let approveTx = await contracts.DAI.functions.approve(proxyAddress, totalBalance.toString(), {gasLimit: 150000, gasPrice: ethers.utils.parseUnits("15", "gwei")});
-            setSubmitTaskProgress("Approving proxy to spend dai...");
+            setSubmitTaskProgress("Transaction: Approving Proxy...");
             setSubmitTaskTx(approveTx.hash);
         }
         let task = await getTask(userAddress, proxyAddress, amount, delay, abiBook, addressBook, contracts.DAI.signer.provider);
-        console.log("encoded task!");
-        console.log("task:", task);
         let gelatoProvider = {
             addr: addressBook.GelatoProvider,
             module: addressBook.GelatoProviderModule,
         }
         let tx = await proxyContract.submitTaskCycle(gelatoProvider, [task], 0, 0, {gasLimit: 1000000, gasPrice: ethers.utils.parseUnits("15", "gwei")});
-        setSubmitTaskProgress("Task transaction submitted...");
+        setSubmitTaskProgress("Transaction: Submitting Task...");
         setSubmitTaskTx(tx.hash);
         let receipt;
         let i=0;
@@ -225,11 +223,11 @@ export default function HomePage() {
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 i++;
                 if (i%3==1) {
-                    setSubmitTaskProgress("Task transaction submitted.  ");
+                    setSubmitTaskProgress("Transaction: Submitting Task.");
                 } else if (i%3==2) {
-                    setSubmitTaskProgress("Task transaction submitted.. ");
+                    setSubmitTaskProgress("Transaction: Submitting Task..");
                 } else {
-                    setSubmitTaskProgress("Task transaction submitted...");
+                    setSubmitTaskProgress("Transaction: Submitting Task...");
                 }
             }
         }
@@ -247,15 +245,14 @@ export default function HomePage() {
         let r = await axios.post('https://api.thegraph.com/subgraphs/name/gelatodigital/gelato-network-rinkeby', {query: query}, {});
         let tasks = r.data.data.taskReceiptWrappers;
         let waitingTasks = [];
+        setSubmitTaskProgress(`Transaction: Canceling task...`);
         for (let i=0; i<tasks.length; i++) {
             if (tasks[i].status=="awaitingExec") {
                 waitingTasks.push(tasks[i]);
             }
         }
         for (let j=0; j<waitingTasks.length; j++) {
-            console.log(waitingTasks[j]);
             let tx = await proxyContract.cancelTask(waitingTasks[j].taskReceipt, {gasLimit:200000, gasPrice:ethers.utils.parseUnits("15", "gwei")});
-            setSubmitTaskProgress(`Canceling task (${j})...`);
             setSubmitTaskTx(tx.hash);
             let k = 0
             while (true) {
@@ -265,18 +262,23 @@ export default function HomePage() {
                 } else {
                     await new Promise(resolve => setTimeout(resolve, 2000));
                     k++;
+                    let str = 'Transaction: Canceling task';
+                    if (j>0) {
+                        str = str + `(${j})`;
+                    }
                     if (k%3==1) {
-                        setSubmitTaskProgress(`Canceling task (${j}).  `);
+                        str = str+'.';
                     } else if (k%3==2) {
-                        setSubmitTaskProgress(`Canceling task (${j}).. `);
+                        str = str+'..';
                     } else {
-                        setSubmitTaskProgress(`Canceling task (${j})...`);
+                        str = str+'...';
                     }
                 }
             }
         }
-        setSubmitTaskProgress('Tasks Canceled!');
+        setSubmitTaskProgress("")
         setSubmitTaskTx("");
+        setLogMessage('Canceled Task(s)');
         setIsCancelTask(false);
     } catch(e) {
         console.log("error in handleCancelTask:", e.message);
@@ -308,10 +310,13 @@ export default function HomePage() {
                 console.log(waitingTasks, currentTasks);
                 setCurrentTasks(waitingTasks);
                 if (waitingTasks.length>0) {
-                    let newLog = {message:'You have a new task in the queue!', tx: null};
-                    let logs = JSON.parse(JSON.stringify(logMessages));
-                    logs.push(newLog);
-                    setLogMessages(logs);
+                    if (logMessage.includes('New task')) {
+                        let index = parseInt(logMessage.substring(logMessage.length-2, logMessage.length-1));
+                        let str = `New task in the queue (${index+1})`;
+                        setLogMessage(str);
+                    } else {
+                        setLogMessage('New task in the queue (0)');
+                    }
                 }
             }
         }
@@ -359,7 +364,7 @@ export default function HomePage() {
                                 submitTaskTx={submitTaskTx}
                             />
                         </StepWizard>
-                        {logMessages.length>0 ? <span>{logMessages.map(({ message }) => {return <p>{message}</p>})}</span>:<span></span>}
+                        {logMessage!="" ? <p className="centered">Log: {logMessage}</p>:<span></span>}
                     </div>
                 </div>
             </div>
