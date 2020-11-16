@@ -303,13 +303,12 @@ export default function HomePage() {
             let waitingTasks = [];
             for (let i=0; i<tasks.length; i++) {
                 if (tasks[i].status=="awaitingExec") {
-                    waitingTasks.push(tasks[i]);
+                    
                 }
             }
             if (JSON.stringify(waitingTasks)!==JSON.stringify(currentTasks)) {
-                console.log(waitingTasks, currentTasks);
                 setCurrentTasks(waitingTasks);
-                if (waitingTasks.length>0) {
+                if (waitingTasks.length>currentTasks.length || (waitingTasks.length>0 && currentTasks.length>0 && waitingTasks[0].cycleId!=currentTasks[0].cycleId)) {
                     if (logMessage.includes('New task')) {
                         let index = parseInt(logMessage.substring(logMessage.length-2, logMessage.length-1));
                         let str = `New task in the queue (${index+1})`;
