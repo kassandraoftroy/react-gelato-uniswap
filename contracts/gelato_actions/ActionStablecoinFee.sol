@@ -12,12 +12,12 @@ contract ActionStablecoinFee is GelatoActionsStandard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public gasProviderCollector;
-    AggregatorV3Interface internal priceOracle;
-    //AggregatorV3Interface internal gasOracle;
-    IERC20 internal token;
-    uint256 public gasLimit;
-    uint256 public gasPrice;
+    address public immutable gasProviderCollector;
+    AggregatorV3Interface public immutable priceOracle;
+    //AggregatorV3Interface public immutable gasOracle;
+    IERC20 public immutable token;
+    uint256 public immutable gasLimit;
+    uint256 public immutable gasPrice;
 
     constructor(address _gasProviderCollector, address _tradePriceAgg, address _token, uint256 _gasLimit, uint256 _gasPriceLimit) public {
         gasProviderCollector = _gasProviderCollector;
@@ -45,7 +45,7 @@ contract ActionStablecoinFee is GelatoActionsStandard {
         // uint256 gasPrice = uint256(p);
         uint256 gasConstant = gasLimit.mul(gasPrice);
 
-        uint256 totalRewardDai = gasConstant.div(100000000).mul(newPrice);
+        uint256 totalRewardDai = gasConstant.mul(newPrice).mul(100).div(100000000).div(90);
         token.transferFrom(_sender, gasProviderCollector, totalRewardDai);
         return totalRewardDai;
     }

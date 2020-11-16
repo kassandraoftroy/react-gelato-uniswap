@@ -32,6 +32,6 @@
     "gelatoDapp.components.ScheduleUniswapStep.submit": "submit",
     "gelatoDapp.components.ScheduleUniswapStep.amountHeader": "DAI per trade:",
     "gelatoDapp.components.ScheduleUniswapStep.delayHeader": "Delay (in seconds):",
-    "gelatoDapp.components.ScheduleUniswapStep.cancel": "cancel",
+    "gelatoDapp.components.ScheduleUniswapStep.cancel": "cancel tasks",
     "gelatoDapp.components.ScheduleUniswapStep.taskReceiptHeader": "Task Receipt"
 }

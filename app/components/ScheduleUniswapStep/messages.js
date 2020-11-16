@@ -32,7 +32,7 @@ export default defineMessages({
     defaultMessage: 'submit a task',
   },
   cancelTask: {
-    id: `${scope}.goBack`,
+    id: `${scope}.cancelTask`,
     defaultMessage: 'cancel a task',
   },
   submit: {
@@ -48,8 +48,8 @@ export default defineMessages({
     defaultMessage: 'Delay (in seconds):',
   },
   cancel: {
-    id: `${scope}.cancelTask`,
-    defaultMessage: 'cancel task', 
+    id: `${scope}.cancel`,
+    defaultMessage: 'cancel tasks', 
   },
   taskReceiptHeader: {
       id: `${scope}.taskReceiptHeader`,

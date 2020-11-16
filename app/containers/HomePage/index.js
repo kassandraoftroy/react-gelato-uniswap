@@ -5,13 +5,13 @@
  *
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import messages from './messages';
 import * as ethers from 'ethers';
 import axios from 'axios';
 import { useInterval } from 'utils/polling';
-import getTask from './gelatoHelpers';
+import { getTask, graphQLquery } from './gelatoHelpers';
 import StepWizard from 'react-step-wizard';
 import ConnectWalletStep from 'components/ConnectWalletStep';
 import CreateProxyStep from 'components/CreateProxyStep';
@@ -43,7 +43,6 @@ export default function HomePage() {
   const [proxyContract, setProxyContract] = useState(null);
   const [abiBook, setAbiBook] = useState(null);
   const [addressBook, setAddressBook] = useState(null);
-  const [lastTaskReceipt, setLastTaskReceipt] = useState(null);
 
   const [userAddress, setUserAddress] = useState("");
   const [proxyAddress, setProxyAddress] = useState("");
@@ -54,6 +53,9 @@ export default function HomePage() {
   const [delayInput, setDelayInput] = useState("");
   const [submitTaskProgress, setSubmitTaskProgress] = useState("");
   const [submitTaskTx, setSubmitTaskTx] = useState("");
+
+  const [logMessages, setLogMessages] = useState([]);
+  const [currentTasks, setCurrentTasks] = useState([]);
 
   const handleAmountInput = (e) => {
       setAmountInput(e.target.value);
@@ -86,8 +88,6 @@ export default function HomePage() {
         let daiContract = new ethers.Contract(r.data.DAI.address, r.data.DAI.abi, signer);
         let wethContract = new ethers.Contract(r.data.WETH.address, r.data.WETH.abi, signer);
         let proxyFactoryContract = new ethers.Contract(r.data.GelatoUserProxyFactory.address, r.data.GelatoUserProxyFactory.abi, signer);
-        let gelatoCoreContract = new ethers.Contract(r.data.GelatoCore.address, r.data.GelatoCore.abi, signer);
-        let aggregatorContract = new ethers.Contract("0x8A753747A1Fa494EC906cE90E9f37563A8AF630e", r.data.IAggregatorV3.abi, provider);
         let daiBalance = await daiContract.functions.balanceOf(address);
         let wethBalance = await wethContract.functions.balanceOf(address);
         let predicted = await proxyFactoryContract.functions.predictProxyAddress(address, STATIC_SALT);
@@ -100,9 +100,25 @@ export default function HomePage() {
             let daiAllowance = await daiContract.functions.allowance(address, predicted[0]);
             let wethAllowance = await wethContract.functions.allowance(address, predicted[0]);
             setProxyAllowance({DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())});
+            let query = graphQLquery(predicted[0]);
+            let r2 = await axios.post('https://api.thegraph.com/subgraphs/name/gelatodigital/gelato-network-rinkeby', {query: query}, {});
+            if ((r2.data.data.taskReceiptWrappers.length) > 0) {
+                let tasks = r2.data.data.taskReceiptWrappers;
+                let waitingTasks = [];
+                for (let i=0; i<tasks.length; i++) {
+                    if (tasks[i].status=="awaitingExec") {
+                        waitingTasks.push(tasks[i]);
+                    }
+                }
+                if (waitingTasks.length>0) {
+                    let myLog = {message:'Welcome back! You already have a task running...', tx: null};
+                    setLogMessages([myLog]);
+                    setCurrentTasks(waitingTasks);
+                }
+            }
         }
         setProxyContract(proxyContract);
-        setContracts({DAI: daiContract, WETH: wethContract, ProxyFactory: proxyFactoryContract, GelatoCore: gelatoCoreContract, PriceAggregator: aggregatorContract});
+        setContracts({DAI: daiContract, WETH: wethContract, ProxyFactory: proxyFactoryContract});
         setUserAddress(address);
         setUserBalances({ETH: ethers.utils.formatEther(ethBalance.toString()), WETH: ethers.utils.formatEther(wethBalance.toString()), DAI: ethers.utils.formatEther(daiBalance.toString())});
         setIsConnected(true);
@@ -122,7 +138,7 @@ export default function HomePage() {
             setCreateProxyProgress("Creating Proxy...");
         }
         let gasLimit = 4000000;
-        let gasPrice = ethers.utils.parseUnits("15", "gwei") //await contracts.ProxyFactory.signer.provider.getGasPrice();
+        let gasPrice = await contracts.ProxyFactory.signer.provider.getGasPrice();
         let maxWeiGas = gasPrice*gasLimit;
         let balance = await contracts.ProxyFactory.signer.getBalance();
         if (maxWeiGas>balance) {
@@ -132,6 +148,7 @@ export default function HomePage() {
         setCreateProxyTx(createTx.hash);
         setCreateProxyProgress("Transaction submitted...");
         await contracts.ProxyFactory.signer.provider.getTransactionReceipt(createTx.hash);
+        let i = 0;
         while (true) {
             try {
                 let hasproxy = await contracts.ProxyFactory.functions.isGelatoUserProxy(proxyAddress);
@@ -147,6 +164,14 @@ export default function HomePage() {
                 } else {
                     console.log("waiting for proxy tx...");
                     await new Promise(resolve => setTimeout(resolve, 2000));
+                    i++;
+                    if (i%3==1) {
+                        setCreateProxyProgress("Transaction submitted.  ");
+                    } else if (i%3==2) {
+                        setCreateProxyProgress("Transaction submitted.. ");
+                    } else {
+                        setCreateProxyProgress("Transaction submitted...");
+                    }
                 }
             } catch(e) {
                 console.log("error waiting for proxy tx...", e.message);
@@ -180,35 +205,36 @@ export default function HomePage() {
             setSubmitTaskProgress("Approving proxy to spend dai...");
             setSubmitTaskTx(approveTx.hash);
         }
-        let prices = await contracts.PriceAggregator.functions.latestRoundData();
-        let rawPrice = Math.round(Number(ethers.utils.parseUnits(prices[1].toString(), "wei")/100000000));
-        let feeAmount = (rawPrice*300000*ethers.utils.parseUnits("40", "gwei"));
-        console.log("fee:", ethers.utils.formatEther(feeAmount.toString()));
-        let task = await getTask(userAddress, proxyAddress, feeAmount, amount, delay, abiBook, addressBook, contracts.DAI.signer.provider);
+        let task = await getTask(userAddress, proxyAddress, amount, delay, abiBook, addressBook, contracts.DAI.signer.provider);
         console.log("encoded task!");
         console.log("task:", task);
         let gelatoProvider = {
             addr: addressBook.GelatoProvider,
             module: addressBook.GelatoProviderModule,
         }
-        let tx = await proxyContract.submitTaskCycle(gelatoProvider, [task], 0, 3, {gasLimit: 1000000, gasPrice: ethers.utils.parseUnits("15", "gwei")});
+        let tx = await proxyContract.submitTaskCycle(gelatoProvider, [task], 0, 0, {gasLimit: 1000000, gasPrice: ethers.utils.parseUnits("15", "gwei")});
         setSubmitTaskProgress("Task transaction submitted...");
         setSubmitTaskTx(tx.hash);
         let receipt;
+        let i=0;
         while (true) {
             receipt = await contracts.DAI.signer.provider.getTransactionReceipt(tx.hash);
             if (receipt != null) {
                 break
             } else {
                 await new Promise(resolve => setTimeout(resolve, 2000));
+                i++;
+                if (i%3==1) {
+                    setSubmitTaskProgress("Task transaction submitted.  ");
+                } else if (i%3==2) {
+                    setSubmitTaskProgress("Task transaction submitted.. ");
+                } else {
+                    setSubmitTaskProgress("Task transaction submitted...");
+                }
             }
         }
-        let iface = new ethers.utils.Interface(abiBook.GelatoCore);
-        let decodedEventLogs = iface.decodeEventLog("LogTaskSubmitted", receipt.logs[0].data);
-        console.log(decodedEventLogs[2]);
-        let taskReceipt = decodedEventLogs[2];
-        setLastTaskReceipt(taskReceipt);
-        setSubmitTaskProgress("Your task is running!");
+        setSubmitTaskProgress("");
+        setSubmitTaskTx("");
         setIsSubmitTask(false);
     } catch(e) {
         console.log("error in handleSubmitTask:", e.message);
@@ -216,34 +242,45 @@ export default function HomePage() {
   }
 
   const handleCancelTask = async () => {
-      //try {
-    let tr = {
-        id: lastTaskReceipt.id,
-        userProxy: lastTaskReceipt.userProxy,
-        provider: lastTaskReceipt.provider,
-        index: lastTaskReceipt.index,
-        tasks: lastTaskReceipt.tasks,
-        expiryDate: lastTaskReceipt.expiryDate,
-        cycleId: lastTaskReceipt.cycleId,
-        submissionsLeft: lastTaskReceipt.submissionsLeft
-    };
-    let tx = await proxyContract.cancelTask(tr, {gasLimit:1000000, gasPrice:ethers.utils.parseUnits("15", "gwei")});
-    setSubmitTaskProgress("Canceling task...");
-    setSubmitTaskTx(tx.hash);
-    while (true) {
-        let receipt = await contracts.DAI.signer.provider.getTransactionReceipt(tx.hash);
-        if (receipt != null) {
-            break
-        } else {
-            await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+        let query = graphQLquery(proxyAddress);
+        let r = await axios.post('https://api.thegraph.com/subgraphs/name/gelatodigital/gelato-network-rinkeby', {query: query}, {});
+        let tasks = r.data.data.taskReceiptWrappers;
+        let waitingTasks = [];
+        for (let i=0; i<tasks.length; i++) {
+            if (tasks[i].status=="awaitingExec") {
+                waitingTasks.push(tasks[i]);
+            }
         }
+        for (let j=0; j<waitingTasks.length; j++) {
+            console.log(waitingTasks[j]);
+            let tx = await proxyContract.cancelTask(waitingTasks[j].taskReceipt, {gasLimit:200000, gasPrice:ethers.utils.parseUnits("15", "gwei")});
+            setSubmitTaskProgress(`Canceling task (${j})...`);
+            setSubmitTaskTx(tx.hash);
+            let k = 0
+            while (true) {
+                let receipt = await contracts.DAI.signer.provider.getTransactionReceipt(tx.hash);
+                if (receipt != null) {
+                    break
+                } else {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    k++;
+                    if (k%3==1) {
+                        setSubmitTaskProgress(`Canceling task (${j}).  `);
+                    } else if (k%3==2) {
+                        setSubmitTaskProgress(`Canceling task (${j}).. `);
+                    } else {
+                        setSubmitTaskProgress(`Canceling task (${j})...`);
+                    }
+                }
+            }
+        }
+        setSubmitTaskProgress('Tasks Canceled!');
+        setSubmitTaskTx("");
+        setIsCancelTask(false);
+    } catch(e) {
+        console.log("error in handleCancelTask:", e.message);
     }
-    setSubmitTaskProgress('Task Canceled!');
-    setIsCancelTask(false);
-      //} catch(e) {
-          //console.log('handle failed');
-          //console.log("error in handleCancelTask:", e.message);
-      //}
   };
 
   useInterval(async ()=>{
@@ -258,6 +295,25 @@ export default function HomePage() {
             let wethAllowance = await contracts.WETH.functions.allowance(userAddress, proxyAddress);
             let allowances = {DAI: ethers.utils.formatEther(daiAllowance.toString()), WETH: ethers.utils.formatEther(wethAllowance.toString())};
             setProxyAllowance(allowances);
+            let query = graphQLquery(proxyAddress);
+            let r = await axios.post('https://api.thegraph.com/subgraphs/name/gelatodigital/gelato-network-rinkeby', {query: query}, {});
+            let tasks = r.data.data.taskReceiptWrappers;
+            let waitingTasks = [];
+            for (let i=0; i<tasks.length; i++) {
+                if (tasks[i].status=="awaitingExec") {
+                    waitingTasks.push(tasks[i]);
+                }
+            }
+            if (JSON.stringify(waitingTasks)!==JSON.stringify(currentTasks)) {
+                console.log(waitingTasks, currentTasks);
+                setCurrentTasks(waitingTasks);
+                if (waitingTasks.length>0) {
+                    let newLog = {message:'You have a new task in the queue!', tx: null};
+                    let logs = JSON.parse(JSON.stringify(logMessages));
+                    logs.push(newLog);
+                    setLogMessages(logs);
+                }
+            }
         }
     }
   }, 3000);
@@ -303,6 +359,7 @@ export default function HomePage() {
                                 submitTaskTx={submitTaskTx}
                             />
                         </StepWizard>
+                        {logMessages.length>0 ? <span>{logMessages.map(({ message }) => {return <p>{message}</p>})}</span>:<span></span>}
                     </div>
                 </div>
             </div>

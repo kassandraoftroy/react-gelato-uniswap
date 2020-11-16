@@ -34,8 +34,6 @@ const ScheduleUniswapStep = props => {
                         }
                         {props.isCancelTask ?
                             <div>
-                                <p><strong><FormattedMessage {...messages.taskReceiptHeader} /></strong></p>
-                                <p><textarea className='customTextarea' type="text" onChange={props.taskReceiptHandler}></textarea></p>
                                 <p><button className='btn btn-primary btn-block customButton' onClick={props.cancelTaskHandler}><FormattedMessage {...messages.cancel} /></button></p>
                                 <p><button className='btn btn-primary btn-block customButton' onClick={props.switchCancelTask}><FormattedMessage {...messages.goBack} /></button></p>
                             </div>
