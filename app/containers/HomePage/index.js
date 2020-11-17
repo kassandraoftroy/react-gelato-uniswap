@@ -81,8 +81,8 @@ export default function HomePage() {
         let address = await signer.getAddress();
         let ethBalance = await signer.getBalance();
         let r = await axios.post('http://127.0.0.1:3000/contracts', {}, {});
-        let abis = {DAI: r.data.DAI.abi, WETH: r.data.WETH.abi, ProxyFactory: r.data.GelatoUserProxyFactory.abi, UniswapRouter: r.data.UniswapRouter.abi, ActionStablecoinFee: r.data.ActionStablecoinFee.abi, ConditionTimeStateful: r.data.ConditionTimeStateful.abi, GelatoCore: r.data.GelatoCore.abi, Proxy: r.data.IGelatoUserProxy.abi};
-        let addresses = {DAI: r.data.DAI.address, WETH: r.data.WETH.address, ProxyFactory: r.data.GelatoUserProxyFactory.address, UniswapRouter: r.data.UniswapRouter.address, ActionStablecoinFee: r.data.ActionStablecoinFee.address, ConditionTimeStateful: r.data.ConditionTimeStateful.address, GelatoCore: r.data.GelatoCore.address, GelatoProvider: r.data.GelatoProvider.address, GelatoProviderModule: r.data.GelatoProviderModule.address};
+        let abis = {DAI: r.data.DAI.abi, WETH: r.data.WETH.abi, ProxyFactory: r.data.GelatoUserProxyFactory.abi, UniswapRouter: r.data.UniswapRouter.abi, ActionStablecoinFee: r.data.ActionStablecoinFee.abi, ConditionTimeStateful: r.data.ConditionTimeStateful.abi, GelatoCore: r.data.GelatoCore.abi, Proxy: r.data.IGelatoUserProxy.abi, ActionSafeUniswap: r.data.ActionSafeUniswap.abi};
+        let addresses = {DAI: r.data.DAI.address, WETH: r.data.WETH.address, ProxyFactory: r.data.GelatoUserProxyFactory.address, UniswapRouter: r.data.UniswapRouter.address, ActionStablecoinFee: r.data.ActionStablecoinFee.address, ConditionTimeStateful: r.data.ConditionTimeStateful.address, GelatoCore: r.data.GelatoCore.address, GelatoProvider: r.data.GelatoProvider.address, GelatoProviderModule: r.data.GelatoProviderModule.address, ActionSafeUniswap: r.data.ActionSafeUniswap.address};
         setAbiBook(abis);
         setAddressBook(addresses);
         let daiContract = new ethers.Contract(r.data.DAI.address, r.data.DAI.abi, signer);

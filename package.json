@@ -67,6 +67,8 @@
     "@babel/polyfill": "7.4.3",
     "@chainlink/contracts": "0.0.11",
     "@gelatonetwork/core": "^1.0.0",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "axios": "^0.21.0",
     "body-parser": "^1.19.0",
     "bootstrap": "^4.5.3",
