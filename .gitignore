@@ -10,7 +10,6 @@ lerna-debug.log*
 .DS_Store
 
 #hardhat
-artifacts/
 cache/
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
