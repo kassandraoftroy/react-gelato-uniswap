@@ -30,6 +30,8 @@ module.exports = {
           '0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa': 'DAI',
           WETH: '0xc778417e063141139fce010982780140aa0cd5ab',
           '0xc778417e063141139fce010982780140aa0cd5ab': 'WETH',
+          USDC: '0x4DBCdF9B62e891a7cec5A2568C3F4FAF9E8Abe2b',
+          '0x4DBCdF9B62e891a7cec5A2568C3F4FAF9E8Abe2b': 'USDC'
         },
 
         // Rinkeby: Gelato
@@ -44,6 +46,7 @@ module.exports = {
 
         oracles: {
           DaiEth: '0x74825DbC8BF76CC4e9494d0ecB210f676Efa001D',
+          UsdcEth: '0xdCA36F27cbC4E38aE16C4E9f99D39b42337F6dcf'
         },
       },
 
@@ -66,8 +69,8 @@ module.exports = {
       deployments: {
         // ==== Actions ====
         ActionTransfer: '0x783bD05d52B02811dECC8960aBF38A56c9Fb5F9B',
-        ActionSafeUniswap: '0xaAafE558319d45f8dEc1D9c523EbD4D5fcA5F821',
-        TokenConversion: '0xcFa22A2256ed345A4c5419c950ab9c9855fdD365',
+        ActionSafeUniswap: '0x9bF279621fA64E2D1BbA2cde3F72CC52583FCA6d',
+        TokenConversion: '0xCc3AA6144586f40695cC1240cac0fE50F726522A',
         // Provider
         FeeHandlerFactory: '0x6988f5c52E0b6Bdcf6d0223e65a4C49F0c2cb1F8',
         // ==== Conditions ====

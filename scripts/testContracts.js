@@ -27,18 +27,25 @@ const testTokenConversion = async wallet => {
     artifact.abi,
     wallet,
   );
+  console.log("DAI->ETH");
+  const r1 = await contract.functions.ethPrice(hre.network.config.addressBook.erc20.DAI);
+  console.log(r1.toString(), ethers.utils.formatEther(r1.toString()));
   const resp = await contract.functions.convert(
     ethers.utils.parseEther('1').toString(),
     hre.network.config.addressBook.erc20.DAI,
     ethers.constants.AddressZero,
   );
   console.log(resp.toString(), ethers.utils.formatEther(resp.toString()));
+  console.log("USDC->ETH");
+  const r2 = await contract.functions.ethPrice(hre.network.config.addressBook.erc20.USDC);
+  console.log(r2.toString(), ethers.utils.formatEther(r2.toString()));
   const resp2 = await contract.functions.convert(
-    ethers.utils.parseEther('1000').toString(),
-    hre.network.config.addressBook.erc20.DAI,
+    '1000000',
+    hre.network.config.addressBook.erc20.USDC,
     ethers.constants.AddressZero,
   );
   console.log(resp2.toString(), ethers.utils.formatEther(resp2.toString()));
+  console.log("DAI->ETH 5% slippage");
   const resp3 = await contract.functions.minimumOut(
     ethers.utils.parseEther('1').toString(),
     hre.network.config.addressBook.erc20.DAI,
@@ -47,14 +54,13 @@ const testTokenConversion = async wallet => {
     1
   );
   console.log(resp3.toString(), ethers.utils.formatEther(resp3.toString()));
-  const resp4 = await contract.functions.minimumOut(
+  console.log("DAI->USDC");
+  const resp4 = await contract.functions.convert(
     ethers.utils.parseEther('1').toString(),
     hre.network.config.addressBook.erc20.DAI,
-    ethers.constants.AddressZero,
-    10050,
-    10000
+    hre.network.config.addressBook.erc20.USDC
   );
-  console.log(resp4.toString(), ethers.utils.formatEther(resp4.toString()));
+  console.log(resp4.toString(), Number(resp4.toString())/1000000);
 };
 
 const testActionSafeUniswap = async wallet => {
@@ -65,7 +71,7 @@ const testActionSafeUniswap = async wallet => {
     artifact.abi,
     wallet,
   );
-  const erc20Artifact = hre.artifacts.readArtifactSync('IERC20');
+  const erc20Artifact = hre.artifacts.readArtifactSync('@gelatonetwork/core/contracts/external/IERC20.sol:IERC20');
   const daiContract = new ethers.Contract(
     hre.network.config.addressBook.erc20.DAI,
     erc20Artifact.abi,
@@ -108,6 +114,7 @@ const testActionSafeUniswap = async wallet => {
     ],
     wallet.address,
     3211295150,
+    10050
   ]);
   const result = await testProxy.makeDelegatecall(
     actionAddress,

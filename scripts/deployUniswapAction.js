@@ -40,8 +40,23 @@ const deployUniswapAction = async wallet => {
       const tx2 = await contract.functions.addOracle(
         hre.network.config.addressBook.erc20.DAI,
         hre.network.config.addressBook.oracles.DaiEth,
+        0
       );
-      console.log(' adding oracle:', tx2.hash);
+      console.log(' adding dai oracle:', tx2.hash);
+      while (true) {
+        receipt = await wallet.provider.getTransactionReceipt(tx2.hash);
+        if (receipt != null) {
+          break;
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+      const tx3 = await contract.functions.addOracle(
+        hre.network.config.addressBook.erc20.USDC,
+        hre.network.config.addressBook.oracles.UsdcEth,
+        0
+      );
+      console.log(' adding usdc oracle:', tx3.hash);
     } catch (e) {
       console.log('error deploying contract:', e.message);
     }
@@ -86,7 +101,6 @@ const deployUniswapAction = async wallet => {
       const deployTx3 = factory3.getDeployTransaction(
         hre.network.config.addressBook.uniswapV2.router2,
         tokenConv,
-        10050,
         10000
       );
       deployTx3.gasLimit = 6000000;

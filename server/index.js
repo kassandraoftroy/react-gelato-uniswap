@@ -54,7 +54,7 @@ app.post('/contracts', (_req, res) => {
   );
   const proxyArtifact = hre.artifacts.readArtifactSync('IGelatoUserProxy');
   const uniArtifact = hre.artifacts.readArtifactSync('IUniswapV2Router02');
-  const erc20Artifact = hre.artifacts.readArtifactSync('IERC20');
+  const erc20Artifact = hre.artifacts.readArtifactSync('@gelatonetwork/core/contracts/external/IERC20.sol:IERC20');
   const feeActionArtifact = hre.artifacts.readArtifactSync(
     'ActionStablecoinFee',
   );
