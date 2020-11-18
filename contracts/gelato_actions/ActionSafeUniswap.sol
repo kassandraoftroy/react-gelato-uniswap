@@ -2,16 +2,11 @@
 pragma solidity ^0.6.10;
 
 import {GelatoActionsStandard} from "@gelatonetwork/core/contracts/actions/GelatoActionsStandard.sol";
-import {SafeERC20} from "@gelatonetwork/core/contracts/external/SafeERC20.sol";
-import {SafeMath} from "@gelatonetwork/core/contracts/external/SafeMath.sol";
-import {IERC20} from "@gelatonetwork/core/contracts/external/IERC20.sol";
 
 import {IUniswapV2Router02} from "./dapp_interfaces/IUniswapV2.sol";
 import {TokenConversion} from "./TokenConversion.sol";
 
 contract ActionSafeUniswap is GelatoActionsStandard {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
 
     uint256 public immutable slippageFactor;
     uint256 public immutable slippageConstant;
