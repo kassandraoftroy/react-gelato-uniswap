@@ -66,8 +66,8 @@ module.exports = {
       deployments: {
         // ==== Actions ====
         ActionTransfer: '0x783bD05d52B02811dECC8960aBF38A56c9Fb5F9B',
-        ActionSafeUniswap: '0x55602108E1DF81c1f1b07bf20EEA8310780924Fa',
-        TokenConversion: '0x917d5352769acF8A5E2E4300aE0807E336Ca4a36',
+        ActionSafeUniswap: '0xaAafE558319d45f8dEc1D9c523EbD4D5fcA5F821',
+        TokenConversion: '0xcFa22A2256ed345A4c5419c950ab9c9855fdD365',
         // Provider
         FeeHandlerFactory: '0x6988f5c52E0b6Bdcf6d0223e65a4C49F0c2cb1F8',
         // ==== Conditions ====

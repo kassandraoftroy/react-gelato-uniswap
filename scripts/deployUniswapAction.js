@@ -86,7 +86,8 @@ const deployUniswapAction = async wallet => {
       const deployTx3 = factory3.getDeployTransaction(
         hre.network.config.addressBook.uniswapV2.router2,
         tokenConv,
-        1,
+        10050,
+        10000
       );
       deployTx3.gasLimit = 6000000;
       deployTx3.gasPrice = ethers.utils.parseUnits('10', 'gwei');

@@ -44,13 +44,15 @@ const testTokenConversion = async wallet => {
     hre.network.config.addressBook.erc20.DAI,
     ethers.constants.AddressZero,
     20,
+    1
   );
   console.log(resp3.toString(), ethers.utils.formatEther(resp3.toString()));
   const resp4 = await contract.functions.minimumOut(
     ethers.utils.parseEther('1').toString(),
     hre.network.config.addressBook.erc20.DAI,
     ethers.constants.AddressZero,
-    1,
+    10050,
+    10000
   );
   console.log(resp4.toString(), ethers.utils.formatEther(resp4.toString()));
 };

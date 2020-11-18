@@ -39,9 +39,10 @@ contract TokenConversion {
         return _amount.mul(inPrice).div(outPrice);
     }
 
-    function minimumOut(uint256 _amountIn, address _inToken, address _outToken, uint256 _slippageFactor) public view returns (uint256) {
+    function minimumOut(uint256 _amountIn, address _inToken, address _outToken, uint256 _slippageFactor, uint256 _slippageConstant) public view returns (uint256) {
+        require(_slippageFactor>=_slippageConstant);
         uint256 exactOut = convert(_amountIn, _inToken, _outToken);
-        uint256 slippage = exactOut.div(_slippageFactor);
+        uint256 slippage = exactOut.mul(_slippageConstant).div(_slippageFactor);
         uint256 minOut = exactOut.sub(slippage);
         return minOut;
     }
